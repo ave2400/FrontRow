@@ -1,12 +1,13 @@
-import WebcamFeed from './components/WebcamFeed';
-
+import React from "react";
+import WebcamContainer from "./components/WebcamContainer";
 
 function App() {
   return (
-    <div className="h-screen">
-      <WebcamFeed />
+    <div className="App">
+      <WebcamContainer />
     </div>
   );
 }
 
 export default App;
+
