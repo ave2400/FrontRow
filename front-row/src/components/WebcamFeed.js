@@ -1,7 +1,7 @@
 import React, { useRef, useEffect } from "react";
 import "./WebcamFeed.css";
 
-const WebcamFeed = ({ zoom }) => {
+const WebcamFeed = ({ zoom, position, isInverted  }) => {
   const videoRef = useRef(null);
 
   useEffect(() => {
@@ -19,8 +19,22 @@ const WebcamFeed = ({ zoom }) => {
   }, []);
 
   return (
-    <div className="webcam-feed">
-      <video ref={videoRef} autoPlay playsInline style={{ transform: `scale(${zoom})` }} />
+    <div 
+      className="webcam-feed"
+      style={{
+        transform: `translate(${position?.x || 0}px, ${position?.y || 0}px)`
+      }}
+    >
+      <video 
+        ref={videoRef} 
+        autoPlay 
+        playsInline 
+        style={{ 
+          transform: `scale(${zoom})`,
+          transformOrigin: 'center',
+          filter: isInverted ? 'invert(100%)' : 'none'
+        }} 
+      />
     </div>
   );
 };

@@ -1,27 +1,134 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import WebcamFeed from "./WebcamFeed";
 import ZoomControls from "./ZoomControls";
-import "./WebcamContainer.css"; // Import CSS
+import InvertButton from "./InvertButton";
+
+import "./WebcamContainer.css";
 
 const WebcamContainer = () => {
   const [zoom, setZoom] = useState(1);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [isInverted, setIsInverted] = useState(false);
+  const dragStartRef = useRef({ x: 0, y: 0 });
+  const positionRef = useRef({ x: 0, y: 0 });
+  const containerRef = useRef(null);
 
-  // Function to zoom in
+  // Calculate the maximum allowed movement based on zoom level
+  const getBoundaries = useCallback(() => {
+    if (!containerRef.current) return { maxX: 0, maxY: 0 };
+    
+    const container = containerRef.current.getBoundingClientRect();
+    // How much the content grows when zoomed
+    const extraWidth = (container.width * zoom - container.width) / 2;
+    const extraHeight = (container.height * zoom - container.height) / 2;
+
+    return {
+      maxX: extraWidth,
+      maxY: extraHeight
+    };
+  }, [zoom]);
+
+  // Clamp position within boundaries
+  const clampPosition = useCallback((newX, newY) => {
+    const { maxX, maxY } = getBoundaries();
+    return {
+      x: Math.min(Math.max(newX, -maxX), maxX),
+      y: Math.min(Math.max(newY, -maxY), maxY)
+    };
+  }, [getBoundaries]);
+
   const zoomIn = () => setZoom((prevZoom) => Math.min(prevZoom + 0.2, 3));
+  const zoomOut = () => {
+    setZoom((prevZoom) => {
+      const newZoom = Math.max(prevZoom - 0.2, 1);
+      if (newZoom === 1) {
+        // Reset position when fully zoomed out
+        setPosition({ x: 0, y: 0 });
+      } else {
+        // Clamp position to new boundaries when zooming out
+        setPosition(prev => clampPosition(prev.x, prev.y));
+      }
+      return newZoom;
+    });
+  };
 
-  // Function to zoom out
-  const zoomOut = () => setZoom((prevZoom) => Math.max(prevZoom - 0.2, 1));
+  const handleDragStart = (e) => {
+    if (zoom === 1) return;
+    
+    e.preventDefault();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    
+    setIsDragging(true);
+    dragStartRef.current = { x: clientX, y: clientY };
+    positionRef.current = position;
+  };
+
+  const handleDrag = (e) => {
+    if (!isDragging || zoom === 1) return;
+
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    
+    const deltaX = clientX - dragStartRef.current.x;
+    const deltaY = clientY - dragStartRef.current.y;
+
+    const newPosition = clampPosition(
+      positionRef.current.x + deltaX,
+      positionRef.current.y + deltaY
+    );
+    
+    setPosition(newPosition);
+  };
+
+  const handleDragEnd = () => {
+    setIsDragging(false);
+    positionRef.current = position;
+  };
+
+  const handleWheel = (e) => {
+    if (zoom === 1) return;
+
+    e.preventDefault();
+
+    const deltaX = e.deltaMode === 1 ? e.deltaX * 20 : e.deltaX;
+    const deltaY = e.deltaMode === 1 ? e.deltaY * 20 : e.deltaY;
+
+    setPosition(prevPosition => {
+      const newPosition = clampPosition(
+        prevPosition.x - deltaX,
+        prevPosition.y - deltaY
+      );
+      return newPosition;
+    });
+  };
 
   return (
-    <div className="webcam-container">
-      {/* Camera container */}
-      <div className="webcam-box">
-        {/* Webcam feed */}
-        <WebcamFeed zoom={zoom} />
-
-        {/* Zoom controls inside the container */}
-        <div className="zoom-controls">
+    <div 
+      ref={containerRef}
+      className="webcam-container"
+      onMouseMove={handleDrag}
+      onMouseUp={handleDragEnd}
+      onMouseLeave={handleDragEnd}
+      onTouchMove={handleDrag}
+      onTouchEnd={handleDragEnd}
+      onWheel={handleWheel}
+    >
+      <div 
+        className="webcam-box"
+        onMouseDown={handleDragStart}
+        onTouchStart={handleDragStart}
+        style={{ cursor: zoom > 1 ? (isDragging ? 'grabbing' : 'grab') : 'default' }}
+      >
+        <WebcamFeed zoom={zoom} position={position} isInverted={isInverted} />
+        
+        <div className="controls-container">
           <ZoomControls zoomIn={zoomIn} zoomOut={zoomOut} />
+          <InvertButton 
+            isInverted={isInverted} 
+            onToggle={() => setIsInverted(!isInverted)} 
+          />
         </div>
       </div>
     </div>
