@@ -18,7 +18,6 @@ const WebcamFeed = ({ zoom, position, filters  }) => {
     startWebcam();
   }, []);
 
-  // Apply all filters with default values if not provided
   const {
     contrast = 100,
     brightness = 100,

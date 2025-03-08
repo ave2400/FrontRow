@@ -46,10 +46,8 @@ const WebcamContainer = () => {
     setZoom((prevZoom) => {
       const newZoom = Math.max(prevZoom - 0.2, 1);
       if (newZoom === 1) {
-        // Reset position when fully zoomed out
         setPosition({ x: 0, y: 0 });
       } else {
-        // Clamp position to new boundaries when zooming out
         setPosition(prev => clampPosition(prev.x, prev.y));
       }
       return newZoom;

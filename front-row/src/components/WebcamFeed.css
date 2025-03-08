@@ -10,7 +10,7 @@
 }
 
 .webcam-feed.dragging {
-  transition: none; /* Disable transition while dragging for smooth movement */
+  transition: none; 
 }
 
 .webcam-feed video {
@@ -19,7 +19,7 @@
   object-fit: cover;
   border-radius: 12px;
 }
-/* Add to your existing WebcamContainer.css */
+
 .controls-container {
   position: absolute;
   bottom: 20px;

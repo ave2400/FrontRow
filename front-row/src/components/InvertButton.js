@@ -1,4 +1,3 @@
-// InvertButton.js
 import React from 'react';
 
 const InvertButton = ({ isInverted, onToggle }) => {
