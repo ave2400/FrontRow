@@ -1,7 +1,7 @@
 import React, { useRef, useEffect } from "react";
 import "./WebcamFeed.css";
 
-const WebcamFeed = ({ zoom, position, isInverted  }) => {
+const WebcamFeed = ({ zoom, position, filters  }) => {
   const videoRef = useRef(null);
 
   useEffect(() => {
@@ -18,6 +18,14 @@ const WebcamFeed = ({ zoom, position, isInverted  }) => {
     startWebcam();
   }, []);
 
+  // Apply all filters with default values if not provided
+  const {
+    contrast = 100,
+    brightness = 100,
+    grayscale = 0,
+    invert = 0
+  } = filters;
+
   return (
     <div 
       className="webcam-feed"
@@ -32,7 +40,12 @@ const WebcamFeed = ({ zoom, position, isInverted  }) => {
         style={{ 
           transform: `scale(${zoom})`,
           transformOrigin: 'center',
-          filter: isInverted ? 'invert(100%)' : 'none'
+          filter: `
+            contrast(${contrast}%)
+            brightness(${brightness}%)
+            grayscale(${grayscale}%)
+            invert(${invert}%)
+          `
         }} 
       />
     </div>

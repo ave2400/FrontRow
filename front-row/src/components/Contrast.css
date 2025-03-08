@@ -1,0 +1,100 @@
+/* Contrast.css */
+.contrast-controls {
+  position: relative;
+}
+
+.contrast-toggle {
+  background-color: white;
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
+  font-size: 20px;
+}
+
+.contrast-toggle:hover {
+  background-color: #f0f0f0;
+  transform: scale(1.05);
+}
+
+.contrast-panel {
+  position: absolute;
+  bottom: 50px;
+  right: 0;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 16px;
+  width: 280px;
+  z-index: 100;
+}
+
+.contrast-panel h3 {
+  margin-top: 0;
+  margin-bottom: 12px;
+  font-size: 16px;
+  color: #333;
+}
+
+.presets {
+  margin-bottom: 16px;
+}
+
+.presets p {
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: #555;
+}
+
+.preset-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.preset-button {
+  background-color: #f0f0f0;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.preset-button.active {
+  background-color: #007bff;
+  color: white;
+  border-color: #0056b3;
+}
+
+.preset-button:hover:not(.active) {
+  background-color: #e0e0e0;
+}
+
+.filter-sliders {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.filter-control {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.filter-control label {
+  font-size: 14px;
+  color: #555;
+}
+
+.filter-control input[type="range"] {
+  width: 100%;
+}

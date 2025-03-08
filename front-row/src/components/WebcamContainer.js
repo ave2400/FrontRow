@@ -1,15 +1,18 @@
 import React, { useState, useRef, useCallback } from "react";
 import WebcamFeed from "./WebcamFeed";
 import ZoomControls from "./ZoomControls";
-import InvertButton from "./InvertButton";
-
+import ContrastControls from "./Contrast";
 import "./WebcamContainer.css";
-
 const WebcamContainer = () => {
   const [zoom, setZoom] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
-  const [isInverted, setIsInverted] = useState(false);
+  const [filters, setFilters] = useState({
+    contrast: 100,
+    brightness: 100,
+    grayscale: 0,
+    invert: 0
+  });  
   const dragStartRef = useRef({ x: 0, y: 0 });
   const positionRef = useRef({ x: 0, y: 0 });
   const containerRef = useRef(null);
@@ -104,6 +107,10 @@ const WebcamContainer = () => {
     });
   };
 
+  const handleFilterChange = (newFilters) => {
+    setFilters(newFilters);
+  };
+
   return (
     <div 
       ref={containerRef}
@@ -121,14 +128,11 @@ const WebcamContainer = () => {
         onTouchStart={handleDragStart}
         style={{ cursor: zoom > 1 ? (isDragging ? 'grabbing' : 'grab') : 'default' }}
       >
-        <WebcamFeed zoom={zoom} position={position} isInverted={isInverted} />
+        <WebcamFeed zoom={zoom} position={position} filters={filters} />
         
         <div className="controls-container">
           <ZoomControls zoomIn={zoomIn} zoomOut={zoomOut} />
-          <InvertButton 
-            isInverted={isInverted} 
-            onToggle={() => setIsInverted(!isInverted)} 
-          />
+          <ContrastControls onFilterChange={handleFilterChange} />
         </div>
       </div>
     </div>
