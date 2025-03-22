@@ -1,70 +1,19 @@
-# Getting Started with Create React App
+![image](https://github.com/user-attachments/assets/8d0b6edc-c3ab-4a47-8ddf-ce6bb776d180)
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+FrontRow website design for the first pilot program. 
 
-## Available Scripts
+**Introduction**
 
-In the project directory, you can run:
+Our innovative note-taking website, FrontRow, transforms how people capture, share, and engage with presentations in classrooms, offices, and conferences. By seamlessly connecting to webcams and phone cameras, our app instantly captures and displays presentation content, eliminating the struggle of keeping up with fast-paced discussions.
+We aim to create accessible note-taking for individuals with low vision and learning disabilities. However, with or without a disability FrontRow will be the stop for anyone’s notes and visual information. To enhance clarity, users can apply contrast and cleanup options, ensuring notes remain crisp and readable. What sets us apart is our real-time image integration—whenever a new note is added, corresponding presentation visuals appear instantly.
+We redefine accessibility by making presentations more interactive and engaging. Whether in a lecture hall, a business meeting, or a conference, our app ensures that key content is always within reach, helping users focus on ideas rather than scrambling to capture information. Experience the future of note-taking—where innovation meets social impact, FrontRow. 
 
-### `npm start`
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+**Feature Summary**
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+Video Display: 
 
-### `npm test`
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+**How to Run Locally**
 
-### `npm run build`
-
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
-
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
-
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
-
-### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
-
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+Camera - personal webcam, logi webcam
