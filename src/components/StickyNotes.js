@@ -4,6 +4,12 @@ import "./StickyNotes.css";
 const StickyNotes = () => {
   const [notes, setNotes] = useState([]);
   const [currentNote, setCurrentNote] = useState({ title: "", content: "" });
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [emailData, setEmailData] = useState({
+    to: "",
+    subject: "My Notes",
+    message: ""
+  });
 
   const addNote = () => {
     if (currentNote.title.trim() && currentNote.content.trim()) {
@@ -43,6 +49,24 @@ const StickyNotes = () => {
     link.click();
   };
 
+  const handleEmailChange = (e) => {
+    const { name, value } = e.target;
+    setEmailData({
+      ...emailData,
+      [name]: value
+    });
+  };
+
+  const sendEmail = () => {
+    const notesContent = notes
+      .map((note) => `${note.title}: ${note.content}`)
+      .join("\n\n");
+
+    const mailtoLink = `mailto:${emailData.to}?subject=${encodeURIComponent(emailData.subject)}&body=${encodeURIComponent(notesContent)}`;
+    window.location.href = mailtoLink;
+    setShowEmailModal(false);
+  };
+
   return (
     <div className="sticky-notes">
       <div className="note-input">
@@ -73,7 +97,34 @@ const StickyNotes = () => {
 
       <div className="export">
         <button onClick={exportNotes}>Export Notes as TXT</button>
+        <button onClick={() => setShowEmailModal(true)}>Send Notes via Email</button>
       </div>
+
+      {showEmailModal && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <h2>Send Notes via Email</h2>
+            <input
+              type="email"
+              name="to"
+              value={emailData.to}
+              onChange={handleEmailChange}
+              placeholder="Recipient's email"
+            />
+            <input
+              type="text"
+              name="subject"
+              value={emailData.subject}
+              onChange={handleEmailChange}
+              placeholder="Email subject"
+            />
+            <div className="modal-buttons">
+              <button onClick={sendEmail}>Send</button>
+              <button onClick={() => setShowEmailModal(false)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
