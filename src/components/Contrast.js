@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import './Contrast.css';
+import "../styles/buttons.css";
 
 // Preset configurations for different visual needs
 const PRESETS = {
@@ -32,7 +33,7 @@ const ContrastControls = ({ onFilterChange }) => {
   return (
     <div className="contrast-controls">
       <button 
-        className="contrast-toggle"
+        className="btn btn-icon"
         onClick={() => setIsOpen(!isOpen)}
         title="Contrast Options"
       >
@@ -49,7 +50,7 @@ const ContrastControls = ({ onFilterChange }) => {
               {Object.keys(PRESETS).map(preset => (
                 <button 
                   key={preset}
-                  className={`preset-button ${activePreset === preset ? 'active' : ''}`}
+                  className={`btn btn-sm ${activePreset === preset ? 'btn-primary' : 'btn-secondary'}`}
                   onClick={() => handlePresetChange(preset)}
                 >
                   {preset.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}

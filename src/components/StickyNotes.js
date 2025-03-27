@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import "./StickyNotes.css";
+import "../styles/buttons.css";
 
 const StickyNotes = () => {
   const [notes, setNotes] = useState([]);
@@ -83,21 +84,21 @@ const StickyNotes = () => {
           onChange={handleChange}
           placeholder="Type your notes..."
         ></textarea>
-        <button onClick={addNote}>Add Note</button>
+        <button className="btn btn-primary" onClick={addNote}>Add Note</button>
       </div>
       <div className="notes-container">
         {notes.map((note) => (
           <div className="note" key={note.id}>
             <h3>{note.title}</h3>
             <p>{note.content}</p>
-            <button onClick={() => handleDelete(note.id)}>Delete</button>
+            <button className="btn btn-danger btn-sm" onClick={() => handleDelete(note.id)}>Delete</button>
           </div>
         ))}
       </div>
 
       <div className="export">
-        <button onClick={exportNotes}>Export Notes as TXT</button>
-        <button onClick={() => setShowEmailModal(true)}>Send Notes via Email</button>
+        <button className="btn btn-primary btn-full" onClick={exportNotes}>Export Notes as TXT</button>
+        <button className="btn btn-secondary btn-full" onClick={() => setShowEmailModal(true)}>Send Notes via Email</button>
       </div>
 
       {showEmailModal && (
@@ -119,8 +120,8 @@ const StickyNotes = () => {
               placeholder="Email subject"
             />
             <div className="modal-buttons">
-              <button onClick={sendEmail}>Send</button>
-              <button onClick={() => setShowEmailModal(false)}>Cancel</button>
+              <button className="btn btn-primary" onClick={sendEmail}>Send</button>
+              <button className="btn btn-danger" onClick={() => setShowEmailModal(false)}>Cancel</button>
             </div>
           </div>
         </div>

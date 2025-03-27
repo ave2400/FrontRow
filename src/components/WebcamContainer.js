@@ -3,6 +3,8 @@ import WebcamFeed from "./WebcamFeed";
 import ZoomControls from "./ZoomControls";
 import ContrastControls from "./Contrast";
 import "./WebcamContainer.css";
+import "../styles/buttons.css";
+
 const WebcamContainer = () => {
   const [zoom, setZoom] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -16,6 +18,7 @@ const WebcamContainer = () => {
   const dragStartRef = useRef({ x: 0, y: 0 });
   const positionRef = useRef({ x: 0, y: 0 });
   const containerRef = useRef(null);
+  const videoRef = useRef(null);
 
   // Calculate the maximum allowed movement based on zoom level
   const getBoundaries = useCallback(() => {
@@ -109,6 +112,52 @@ const WebcamContainer = () => {
     setFilters(newFilters);
   };
 
+  const takeScreenshot = () => {
+    if (!videoRef.current || !containerRef.current) return;
+
+    // Create a canvas element
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    
+    // Get the container dimensions
+    const container = containerRef.current.getBoundingClientRect();
+    canvas.width = container.width;
+    canvas.height = container.height;
+    
+    // Get the video element
+    const video = videoRef.current;
+    
+    // Calculate the visible portion based on zoom and position
+    const scale = 1 / zoom;
+    const visibleWidth = container.width * scale;
+    const visibleHeight = container.height * scale;
+    
+    // Calculate the source rectangle for the current view
+    // When zoomed in, we need to move in the opposite direction of the position
+    const sourceX = (video.videoWidth - visibleWidth) / 2 - (position.x / zoom);
+    const sourceY = (video.videoHeight - visibleHeight) / 2 - (position.y / zoom);
+    
+    // Draw the visible portion of the video
+    context.filter = `
+      contrast(${filters.contrast}%)
+      brightness(${filters.brightness}%)
+      grayscale(${filters.grayscale}%)
+      invert(${filters.invert}%)
+    `;
+    context.drawImage(
+      video,
+      sourceX, sourceY, visibleWidth, visibleHeight,
+      0, 0, canvas.width, canvas.height
+    );
+    
+    // Convert to data URL and trigger download
+    const dataUrl = canvas.toDataURL('image/png');
+    const link = document.createElement('a');
+    link.download = `screenshot-${new Date().toISOString()}.png`;
+    link.href = dataUrl;
+    link.click();
+  };
+
   return (
     <div 
       ref={containerRef}
@@ -126,11 +175,23 @@ const WebcamContainer = () => {
         onTouchStart={handleDragStart}
         style={{ cursor: zoom > 1 ? (isDragging ? 'grabbing' : 'grab') : 'default' }}
       >
-        <WebcamFeed zoom={zoom} position={position} filters={filters} />
+        <WebcamFeed 
+          zoom={zoom} 
+          position={position} 
+          filters={filters} 
+          videoRef={videoRef}
+        />
         
         <div className="controls-container">
           <ZoomControls zoomIn={zoomIn} zoomOut={zoomOut} />
           <ContrastControls onFilterChange={handleFilterChange} />
+          <button
+            onClick={takeScreenshot}
+            className="btn btn-icon"
+            title="Take Screenshot"
+          >
+            📸
+          </button>
         </div>
       </div>
     </div>
