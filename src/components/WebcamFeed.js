@@ -1,22 +1,23 @@
 import React, { useRef, useEffect } from "react";
 import "./WebcamFeed.css";
 
-const WebcamFeed = ({ zoom, position, filters  }) => {
-  const videoRef = useRef(null);
+const WebcamFeed = ({ zoom, position, filters, videoRef }) => {
+  const internalVideoRef = useRef(null);
+  const finalVideoRef = videoRef || internalVideoRef;
 
   useEffect(() => {
     async function startWebcam() {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
+        if (finalVideoRef.current) {
+          finalVideoRef.current.srcObject = stream;
         }
       } catch (err) {
         console.error("Error accessing webcam:", err);
       }
     }
     startWebcam();
-  }, []);
+  }, [finalVideoRef]);
 
   const {
     contrast = 100,
@@ -33,7 +34,7 @@ const WebcamFeed = ({ zoom, position, filters  }) => {
       }}
     >
       <video 
-        ref={videoRef} 
+        ref={finalVideoRef} 
         autoPlay 
         playsInline 
         style={{ 

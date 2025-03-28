@@ -1,0 +1,88 @@
+/* Base button styles */
+.btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 80px;
+}
+
+/* Primary button */
+.btn-primary {
+  background-color: #4caf50;
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: #45a049;
+  transform: translateY(-1px);
+}
+
+/* Secondary button */
+.btn-secondary {
+  background-color: #2196f3;
+  color: white;
+}
+
+.btn-secondary:hover {
+  background-color: #1976d2;
+  transform: translateY(-1px);
+}
+
+/* Danger button */
+.btn-danger {
+  background-color: #f44336;
+  color: white;
+}
+
+.btn-danger:hover {
+  background-color: #d32f2f;
+  transform: translateY(-1px);
+}
+
+/* Icon button */
+.btn-icon {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 8px;
+  background-color: white;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.btn-icon:hover {
+  background-color: #f0f0f0;
+  transform: scale(1.05);
+}
+
+/* Disabled state */
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Small button */
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  min-width: 60px;
+}
+
+/* Large button */
+.btn-lg {
+  padding: 12px 24px;
+  font-size: 1.1rem;
+  min-width: 100px;
+}
+
+/* Full width button */
+.btn-full {
+  width: 100%;
+  max-width: 200px;
+} 
