@@ -5,10 +5,12 @@ import ContrastControls from "./Contrast";
 import "./WebcamContainer.css";
 import "../styles/buttons.css";
 
-const WebcamContainer = () => {
+const WebcamContainer = ({ onScreenshot }) => {
   const [zoom, setZoom] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
+  const [showFlash, setShowFlash] = useState(false);
+  const [showNotification, setShowNotification] = useState(false);
   const [filters, setFilters] = useState({
     contrast: 100,
     brightness: 100,
@@ -115,6 +117,10 @@ const WebcamContainer = () => {
   const takeScreenshot = () => {
     if (!videoRef.current || !containerRef.current) return;
 
+    // Show flash effect
+    setShowFlash(true);
+    setTimeout(() => setShowFlash(false), 200);
+
     // Create a canvas element
     const canvas = document.createElement('canvas');
     const context = canvas.getContext('2d');
@@ -133,7 +139,6 @@ const WebcamContainer = () => {
     const visibleHeight = container.height * scale;
     
     // Calculate the source rectangle for the current view
-    // When zoomed in, we need to move in the opposite direction of the position
     const sourceX = (video.videoWidth - visibleWidth) / 2 - (position.x / zoom);
     const sourceY = (video.videoHeight - visibleHeight) / 2 - (position.y / zoom);
     
@@ -150,12 +155,15 @@ const WebcamContainer = () => {
       0, 0, canvas.width, canvas.height
     );
     
-    // Convert to data URL and trigger download
-    const dataUrl = canvas.toDataURL('image/png');
-    const link = document.createElement('a');
-    link.download = `screenshot-${new Date().toISOString()}.png`;
-    link.href = dataUrl;
-    link.click();
+    // Convert to blob and pass to callback
+    canvas.toBlob((blob) => {
+      if (blob && onScreenshot) {
+        onScreenshot(blob);
+        // Show notification
+        setShowNotification(true);
+        setTimeout(() => setShowNotification(false), 2000);
+      }
+    }, 'image/png', 1.0);
   };
 
   return (
@@ -181,6 +189,13 @@ const WebcamContainer = () => {
           filters={filters} 
           videoRef={videoRef}
         />
+        
+        {showFlash && <div className="screenshot-flash" />}
+        {showNotification && (
+          <div className="screenshot-notification">
+            Screenshot added to note!
+          </div>
+        )}
         
         <div className="controls-container">
           <ZoomControls zoomIn={zoomIn} zoomOut={zoomOut} />

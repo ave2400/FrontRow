@@ -1,28 +1,68 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "./StickyNotes.css";
 import "../styles/buttons.css";
+import { getNotes, createNote, deleteNote } from "../noteService";
 
-const StickyNotes = () => {
+const StickyNotes = ({ currentNote, setCurrentNote, onScreenshot }) => {
   const [notes, setNotes] = useState([]);
-  const [currentNote, setCurrentNote] = useState({ title: "", content: "" });
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [emailData, setEmailData] = useState({
     to: "",
     subject: "My Notes",
     message: ""
   });
+  const [loading, setLoading] = useState(false);
 
-  const addNote = () => {
+  useEffect(() => {
+    loadNotes();
+  }, []);
+
+  // Handle screenshot from WebcamContainer
+  useEffect(() => {
+    if (onScreenshot) {
+      const handleScreenshot = (blob) => {
+        // If no title exists, create a default one
+        if (!currentNote.title) {
+          const now = new Date();
+          const defaultTitle = `Note ${now.toLocaleDateString()} ${now.toLocaleTimeString()}`;
+          setCurrentNote(prev => ({
+            ...prev,
+            title: defaultTitle,
+            images: [...(prev.images || []), blob]
+          }));
+        } else {
+          setCurrentNote(prev => ({
+            ...prev,
+            images: [...(prev.images || []), blob]
+          }));
+        }
+      };
+
+      onScreenshot(handleScreenshot);
+    }
+  }, [onScreenshot, currentNote.title, setCurrentNote]);
+
+  const loadNotes = async () => {
+    try {
+      const fetchedNotes = await getNotes();
+      setNotes(fetchedNotes);
+    } catch (error) {
+      console.error('Error loading notes:', error);
+    }
+  };
+
+  const addNote = async () => {
     if (currentNote.title.trim() && currentNote.content.trim()) {
-      setNotes([
-        ...notes,
-        {
-          id: Date.now(),
-          title: currentNote.title,
-          content: currentNote.content,
-        },
-      ]);
-      setCurrentNote({ title: "", content: "" });
+      setLoading(true);
+      try {
+        const newNote = await createNote(currentNote);
+        setNotes([...notes, newNote]);
+        setCurrentNote({ title: "", content: "", images: [] });
+      } catch (error) {
+        console.error('Error adding note:', error);
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -34,8 +74,28 @@ const StickyNotes = () => {
     });
   };
 
-  const handleDelete = (id) => {
-    setNotes(notes.filter((note) => note.id !== id));
+  const handleDelete = async (id) => {
+    try {
+      await deleteNote(id);
+      setNotes(notes.filter((note) => note.id !== id));
+    } catch (error) {
+      console.error('Error deleting note:', error);
+    }
+  };
+
+  const handleImageChange = (e) => {
+    const files = Array.from(e.target.files);
+    setCurrentNote({
+      ...currentNote,
+      images: [...(currentNote.images || []), ...files]
+    });
+  };
+
+  const removeImage = (index) => {
+    setCurrentNote({
+      ...currentNote,
+      images: currentNote.images.filter((_, i) => i !== index)
+    });
   };
 
   const exportNotes = () => {
@@ -46,7 +106,7 @@ const StickyNotes = () => {
     const blob = new Blob([notesContent], { type: "text/plain" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = "notes.txt"; 
+    link.download = "notes.txt";
     link.click();
   };
 
@@ -68,6 +128,37 @@ const StickyNotes = () => {
     setShowEmailModal(false);
   };
 
+  const NoteList = ({ notes, onDelete }) => (
+    <div className="notes-list">
+      {notes.map((note) => (
+        <div key={note.id} className="note">
+          <h3>{note.title}</h3>
+          <p>{note.content}</p>
+          {note.image_urls && note.image_urls.length > 0 && (
+            <div className="note-images">
+              {note.image_urls.map((url, index) => (
+                <div key={index} className="note-image-container">
+                  <img 
+                    src={url} 
+                    alt={`Screenshot ${index + 1}`} 
+                    className="note-image"
+                    onClick={() => window.open(url, '_blank')}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+          <button 
+            className="btn btn-danger btn-sm" 
+            onClick={() => onDelete(note.id)}
+          >
+            Delete
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+
   return (
     <div className="sticky-notes">
       <div className="note-input">
@@ -84,16 +175,41 @@ const StickyNotes = () => {
           onChange={handleChange}
           placeholder="Type your notes..."
         ></textarea>
-        <button className="btn btn-primary" onClick={addNote}>Add Note</button>
+        {currentNote.images && currentNote.images.length > 0 && (
+          <div className="current-images">
+            <h4>Current Images:</h4>
+            <div className="image-preview-grid">
+              {currentNote.images.map((image, index) => {
+                // Only create object URL if image is a Blob or File
+                const imageUrl = image instanceof Blob ? URL.createObjectURL(image) : image;
+                return (
+                  <div key={index} className="image-preview">
+                    <img 
+                      src={imageUrl} 
+                      alt={`Preview ${index + 1}`} 
+                    />
+                    <button 
+                      className="remove-image"
+                      onClick={() => removeImage(index)}
+                    >
+                      ×
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+        <button 
+          className="btn btn-primary" 
+          onClick={addNote}
+          disabled={loading}
+        >
+          {loading ? 'Adding...' : 'Add Note'}
+        </button>
       </div>
       <div className="notes-container">
-        {notes.map((note) => (
-          <div className="note" key={note.id}>
-            <h3>{note.title}</h3>
-            <p>{note.content}</p>
-            <button className="btn btn-danger btn-sm" onClick={() => handleDelete(note.id)}>Delete</button>
-          </div>
-        ))}
+        <NoteList notes={notes} onDelete={handleDelete} />
       </div>
 
       <div className="export">
