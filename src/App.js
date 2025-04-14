@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { supabase } from './supabaseClient';
 import WebcamContainer from "./components/WebcamContainer";
 import StickyNotes from "./components/StickyNotes";
-import Auth from './components/Auth';
+import SignIn from './components/SignIn';
+import SignUp from './components/SignUp';
 import './App.css';
 
 function App() {
@@ -48,29 +50,58 @@ function App() {
 
   return (
     <div className="App">
-      {!session ? (
-        <Auth />
-      ) : (
-        <div className="app-container">
-          <div className="header">
-            <h1>FrontRow Notes</h1>
-            <button
-              className="btn btn-danger"
-              onClick={() => supabase.auth.signOut()}
-            >
-              Sign Out
-            </button>
-          </div>
-          <div className="main-content">
-            <WebcamContainer onScreenshot={handleScreenshot} />
-            <StickyNotes 
-              currentNote={currentNote} 
-              setCurrentNote={setCurrentNote} 
-              onScreenshot={handleScreenshot}
-            />
-          </div>
-        </div>
-      )}
+      <Router>
+        <Routes>
+          <Route 
+            path="/" 
+            element={
+              session ? (
+                <div className="app-container">
+                  <div className="header">
+                    <h1>FrontRow Notes</h1>
+                    <button
+                      className="btn btn-danger"
+                      onClick={() => supabase.auth.signOut()}
+                    >
+                      Sign Out
+                    </button>
+                  </div>
+                  <div className="main-content">
+                    <WebcamContainer onScreenshot={handleScreenshot} />
+                    <StickyNotes 
+                      currentNote={currentNote} 
+                      setCurrentNote={setCurrentNote} 
+                      onScreenshot={handleScreenshot}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <Navigate to="/signin" replace />
+              )
+            } 
+          />
+          <Route 
+            path="/signin" 
+            element={
+              !session ? (
+                <SignIn />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            } 
+          />
+          <Route 
+            path="/signup" 
+            element={
+              !session ? (
+                <SignUp />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            } 
+          />
+        </Routes>
+      </Router>
     </div>
   );
 }
