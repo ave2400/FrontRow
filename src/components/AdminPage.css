@@ -125,6 +125,16 @@
     font-weight: 500;
   }
   
+  .error-message {
+    background-color: #fee2e2;
+    color: #dc2626;
+    padding: 12px;
+    border-radius: 4px;
+    margin-top: 15px;
+    text-align: center;
+    font-weight: 500;
+  }
+  
   .admin-actions {
     text-align: center;
     margin-top: 20px;
@@ -144,6 +154,27 @@
   .back-link:hover {
     background-color: #e5e7eb;
     color: #1f2937;
+  }
+  
+  .loading-spinner {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 200px;
+    color: #6c63ff;
+    font-size: 18px;
+  }
+  
+  .access-denied {
+    background-color: #f9f9f9;
+    border-radius: 6px;
+    padding: 30px;
+    text-align: center;
+    color: #666;
+  }
+  
+  .access-denied p {
+    margin-bottom: 15px;
   }
   
   /* Add this to App.css or a global CSS file */

@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from "react";
-import "./AdminPage.css"; // You'll need to create this CSS file
+import { streamService } from "../services/streamService";
+import "./AdminPage.css";
 
-const AdminPage = ({ onStreamIdSubmit, currentStreamId }) => {
-  // Initialize with currentStreamId if provided
+const AdminPage = ({ currentStreamId, isLoading }) => {
   const [streamId, setStreamId] = useState(currentStreamId || "");
   const [successMessage, setSuccessMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
+  const [updating, setUpdating] = useState(false);
 
   // Update local state if prop changes
   useEffect(() => {
@@ -13,22 +15,46 @@ const AdminPage = ({ onStreamIdSubmit, currentStreamId }) => {
     }
   }, [currentStreamId]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (onStreamIdSubmit) {
-      onStreamIdSubmit(streamId);
-      console.log("Admin: Stream ID set to:", streamId);
+    
+    try {
+      setSuccessMessage("");
+      setErrorMessage("");
+      setUpdating(true);
       
-      // Show success message
-      setSuccessMessage("Stream ID saved successfully!");
-      setTimeout(() => setSuccessMessage(""), 3000);
+      // Call the streamService directly
+      const success = await streamService.updateStreamId(streamId);
+      
+      if (success) {
+        setSuccessMessage("Stream ID saved successfully!");
+        setTimeout(() => setSuccessMessage(""), 3000);
+      } else {
+        setErrorMessage("Failed to update stream ID. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error updating stream ID:", error);
+      setErrorMessage("An error occurred. Please try again.");
+    } finally {
+      setUpdating(false);
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="admin-page">
+        <div className="admin-container">
+          <h2>Stream Settings</h2>
+          <div className="loading-spinner">Loading...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="admin-page">
       <div className="admin-container">
-        <h2>Admin Stream Settings</h2>
+        <h2>Stream Settings</h2>
         
         {streamId && (
           <div className="stream-preview">
@@ -57,8 +83,15 @@ const AdminPage = ({ onStreamIdSubmit, currentStreamId }) => {
                 onChange={(e) => setStreamId(e.target.value)}
                 placeholder="Enter YouTube Stream ID (e.g., dQw4w9WgXcQ)"
                 required
+                disabled={updating}
               />
-              <button type="submit" className="submit-btn">Save Stream ID</button>
+              <button 
+                type="submit" 
+                className="submit-btn"
+                disabled={updating}
+              >
+                {updating ? "Saving..." : "Save Stream ID"}
+              </button>
             </div>
             <p className="help-text">
               For example, if your YouTube URL is https://www.youtube.com/watch?v=dQw4w9WgXcQ, 
@@ -68,6 +101,10 @@ const AdminPage = ({ onStreamIdSubmit, currentStreamId }) => {
           
           {successMessage && (
             <div className="success-message">{successMessage}</div>
+          )}
+          
+          {errorMessage && (
+            <div className="error-message">{errorMessage}</div>
           )}
         </form>
         
