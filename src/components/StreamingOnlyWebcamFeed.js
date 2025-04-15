@@ -1,7 +1,7 @@
 import React from "react";
 import "./WebcamFeed.css";
 
-const StreamingOnlyWebcamFeed = ({ zoom, position, filters, streamId }) => {
+const StreamingOnlyWebcamFeed = ({ zoom, position, filters, streamId, isLoading }) => {
   console.log("StreamingOnlyWebcamFeed streamId:", streamId);
   const {
     contrast = 100,
@@ -9,6 +9,16 @@ const StreamingOnlyWebcamFeed = ({ zoom, position, filters, streamId }) => {
     grayscale = 0,
     invert = 0
   } = filters || {};
+
+  if (isLoading) {
+    return (
+      <div className="webcam-feed loading-state">
+        <div className="loading-indicator">
+          <p>Loading stream settings...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div 
@@ -40,8 +50,7 @@ const StreamingOnlyWebcamFeed = ({ zoom, position, filters, streamId }) => {
         ></iframe>
       ) : (
         <div className="stream-setup">
-          <p>Please enter a stream ID in the admin page.</p>
-          <p><a href="/admin" style={{color: '#6c63ff'}}>Go to Admin Settings</a></p>
+          <p>No stream is currently available.</p>
         </div>
       )}
     </div>

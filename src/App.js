@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { supabase } from './supabaseClient';
+import { streamService } from './services/streamService';
 import WebcamContainer from "./components/WebcamContainer";
 import StickyNotes from "./components/StickyNotes";
 import SignIn from './components/SignIn';
@@ -12,27 +13,87 @@ function App() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [currentNote, setCurrentNote] = useState({ title: "", content: "", images: [] });
-  
-  // Initialize streamId from localStorage if available
-  const [streamId, setStreamId] = useState(() => {
-    return localStorage.getItem('streamId') || "";
-  });
+  const [streamId, setStreamId] = useState("");
+  const [streamLoading, setStreamLoading] = useState(true);
 
+  // Fetch auth session
   useEffect(() => {
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setLoading(false);
-    });
+    const getSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        setSession(session);
+        setLoading(false);
+      } catch (error) {
+        console.error("Error getting session:", error);
+        setLoading(false);
+      }
+    };
+
+    getSession();
 
     // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        console.log("Auth state changed:", session ? "User authenticated" : "User signed out");
+        setSession(session);
+      }
+    );
 
-    return () => subscription.unsubscribe();
+    return () => subscription?.unsubscribe?.();
+  }, []);
+
+  // Fetch stream ID from Supabase and subscribe to changes
+  useEffect(() => {
+    console.log("Setting up stream ID fetching and subscription...");
+    let isActive = true; // Flag to prevent state updates after unmount
+    
+    const fetchStreamId = async () => {
+      if (!isActive) return;
+      
+      setStreamLoading(true);
+      try {
+        console.log("Fetching stream ID from database...");
+        const id = await streamService.getStreamId();
+        console.log("Stream ID fetched:", id);
+        
+        if (isActive) {
+          setStreamId(id);
+          setStreamLoading(false);
+        }
+      } catch (error) {
+        console.error("Error fetching stream ID:", error);
+        if (isActive) {
+          setStreamLoading(false);
+        }
+      }
+    };
+
+    // Call fetch immediately
+    fetchStreamId();
+
+    // Set up subscription for real-time updates
+    console.log("Setting up real-time subscription...");
+    let subscription;
+    try {
+      subscription = streamService.subscribeToStreamChanges((newStreamId) => {
+        console.log("Stream ID updated in real-time:", newStreamId);
+        if (isActive) {
+          setStreamId(newStreamId);
+        }
+      });
+    } catch (error) {
+      console.error("Error setting up subscription:", error);
+    }
+
+    // Cleanup function
+    return () => {
+      console.log("Cleaning up stream ID subscription");
+      isActive = false;
+      if (subscription?.unsubscribe) {
+        subscription.unsubscribe();
+      }
+    };
   }, []);
 
   const handleScreenshot = (blob) => {
@@ -50,19 +111,16 @@ function App() {
     }
   };
 
-  const handleStreamIdSubmit = (newStreamId) => {
-    // Save to state
-    setStreamId(newStreamId);
-    
-    // Also save to localStorage for persistence
-    localStorage.setItem('streamId', newStreamId);
-    
-    // Log for debugging
-    console.log("App: Stream ID set to:", newStreamId);
-  };
+  // Debug render
+  console.log("Rendering App with:", { 
+    isLoading: loading, 
+    hasSession: !!session, 
+    streamId, 
+    isStreamLoading: streamLoading 
+  });
 
   if (loading) {
-    return <div className="loading">Loading...</div>;
+    return <div className="loading">Loading authentication...</div>;
   }
 
   return (
@@ -76,18 +134,25 @@ function App() {
                 <div className="app-container">
                   <div className="header">
                     <h1>FrontRow Notes</h1>
+                    <div className="header-buttons">
                       <button
                         className="btn btn-danger"
                         onClick={() => supabase.auth.signOut()}
                       >
                         Sign Out
                       </button>
+                    </div>
                   </div>
                   <div className="main-content">
-                    <WebcamContainer 
-                      onScreenshot={handleScreenshot} 
-                      streamId={streamId} 
-                    />
+                    {streamLoading ? (
+                      <div className="stream-loading">Loading stream settings...</div>
+                    ) : (
+                      <WebcamContainer 
+                        onScreenshot={handleScreenshot} 
+                        streamId={streamId} 
+                        isLoading={false}
+                      />
+                    )}
                     <StickyNotes 
                       currentNote={currentNote} 
                       setCurrentNote={setCurrentNote} 
@@ -124,8 +189,8 @@ function App() {
             path="/admin" 
             element={
               <AdminPage 
-                onStreamIdSubmit={handleStreamIdSubmit} 
                 currentStreamId={streamId} 
+                isLoading={streamLoading}
               />
             } 
           />
