@@ -1,14 +1,12 @@
 import React, { useState, useRef, useCallback } from "react";
-// import WebcamFeed from "./WebcamFeed";
-// TODO: UNCOMMENT THIS LATER
 import StreamingOnlyWebcamFeed from "./StreamingOnlyWebcamFeed"
 import ZoomControls from "./ZoomControls";
 import ContrastControls from "./Contrast";
 import "./WebcamContainer.css";
 import "../styles/buttons.css";
 
-const WebcamContainer = ({ onScreenshot, streamId }) => {
-  console.log("WebcamContainer streamId:", streamId);
+const WebcamContainer = ({ onScreenshot, streamId, streamType = "youtube", isLoading }) => {
+  console.log("WebcamContainer streamId:", streamId, "type:", streamType);
   const [zoom, setZoom] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -186,19 +184,13 @@ const WebcamContainer = ({ onScreenshot, streamId }) => {
         onTouchStart={handleDragStart}
         style={{ cursor: zoom > 1 ? (isDragging ? 'grabbing' : 'grab') : 'default' }}
       >
-        {/*  TODO UNCOMMENT THIS LATER */}
-        {/* <WebcamFeed 
-          zoom={zoom} 
-          position={position} 
-          filters={filters} 
-          videoRef={videoRef}
-        /> */}
-
         <StreamingOnlyWebcamFeed
           zoom={zoom}
           position={position}
           filters={filters}
           streamId={streamId}
+          streamType={streamType}
+          isLoading={isLoading}
         />
 
         {showFlash && <div className="screenshot-flash" />}

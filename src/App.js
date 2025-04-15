@@ -14,6 +14,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [currentNote, setCurrentNote] = useState({ title: "", content: "", images: [] });
   const [streamId, setStreamId] = useState("");
+  const [streamType, setStreamType] = useState("youtube"); // Default to YouTube
   const [streamLoading, setStreamLoading] = useState(true);
 
   // Fetch auth session
@@ -43,26 +44,31 @@ function App() {
     return () => subscription?.unsubscribe?.();
   }, []);
 
-  // Fetch stream ID from Supabase and subscribe to changes
+  // Fetch stream ID and type from Supabase
   useEffect(() => {
-    console.log("Setting up stream ID fetching and subscription...");
+    console.log("Setting up stream config fetching...");
     let isActive = true; // Flag to prevent state updates after unmount
     
-    const fetchStreamId = async () => {
+    const fetchStreamConfig = async () => {
       if (!isActive) return;
       
       setStreamLoading(true);
       try {
         console.log("Fetching stream ID from database...");
-        const id = await streamService.getStreamId();
-        console.log("Stream ID fetched:", id);
+        const streamId = await streamService.getStreamId();
+        console.log("Stream ID fetched:", streamId);
+        
+        console.log("Fetching stream type from database...");
+        const streamType = await streamService.getStreamType();
+        console.log("Stream type fetched:", streamType);
         
         if (isActive) {
-          setStreamId(id);
+          setStreamId(streamId);
+          setStreamType(streamType);
           setStreamLoading(false);
         }
       } catch (error) {
-        console.error("Error fetching stream ID:", error);
+        console.error("Error fetching stream config:", error);
         if (isActive) {
           setStreamLoading(false);
         }
@@ -70,29 +76,34 @@ function App() {
     };
 
     // Call fetch immediately
-    fetchStreamId();
+    fetchStreamConfig();
 
-    // Set up subscription for real-time updates
-    console.log("Setting up real-time subscription...");
-    let subscription;
-    try {
-      subscription = streamService.subscribeToStreamChanges((newStreamId) => {
-        console.log("Stream ID updated in real-time:", newStreamId);
-        if (isActive) {
-          setStreamId(newStreamId);
-        }
-      });
-    } catch (error) {
-      console.error("Error setting up subscription:", error);
-    }
-
-    // Cleanup function
     return () => {
-      console.log("Cleaning up stream ID subscription");
       isActive = false;
-      if (subscription?.unsubscribe) {
-        subscription.unsubscribe();
-      }
+    };
+  }, []);
+
+  // Set up subscriptions for real-time stream updates
+  useEffect(() => {
+    console.log("Setting up real-time subscriptions...");
+    
+    // Set up subscription for stream ID changes
+    const idSubscription = streamService.subscribeToStreamChanges((newStreamId) => {
+      console.log("Stream ID updated in real-time:", newStreamId);
+      setStreamId(newStreamId);
+    });
+    
+    // Set up subscription for stream type changes
+    const typeSubscription = streamService.subscribeToStreamTypeChanges((newStreamType) => {
+      console.log("Stream type updated in real-time:", newStreamType);
+      setStreamType(newStreamType);
+    });
+
+    // Cleanup function to unsubscribe
+    return () => {
+      console.log("Cleaning up stream subscriptions");
+      idSubscription.unsubscribe?.();
+      typeSubscription.unsubscribe?.();
     };
   }, []);
 
@@ -116,6 +127,7 @@ function App() {
     isLoading: loading, 
     hasSession: !!session, 
     streamId, 
+    streamType,
     isStreamLoading: streamLoading 
   });
 
@@ -149,7 +161,8 @@ function App() {
                     ) : (
                       <WebcamContainer 
                         onScreenshot={handleScreenshot} 
-                        streamId={streamId} 
+                        streamId={streamId}
+                        streamType={streamType}
                         isLoading={false}
                       />
                     )}
@@ -189,7 +202,8 @@ function App() {
             path="/admin" 
             element={
               <AdminPage 
-                currentStreamId={streamId} 
+                currentStreamId={streamId}
+                currentStreamType={streamType}
                 isLoading={streamLoading}
               />
             } 
