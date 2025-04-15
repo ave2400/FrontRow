@@ -1,11 +1,14 @@
 import React, { useState, useRef, useCallback } from "react";
-import WebcamFeed from "./WebcamFeed";
+// import WebcamFeed from "./WebcamFeed";
+// TODO: UNCOMMENT THIS LATER
+import StreamingOnlyWebcamFeed from "./StreamingOnlyWebcamFeed"
 import ZoomControls from "./ZoomControls";
 import ContrastControls from "./Contrast";
 import "./WebcamContainer.css";
 import "../styles/buttons.css";
 
-const WebcamContainer = ({ onScreenshot }) => {
+const WebcamContainer = ({ onScreenshot, streamId }) => {
+  console.log("WebcamContainer streamId:", streamId);
   const [zoom, setZoom] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -16,7 +19,7 @@ const WebcamContainer = ({ onScreenshot }) => {
     brightness: 100,
     grayscale: 0,
     invert: 0
-  });  
+  });
   const dragStartRef = useRef({ x: 0, y: 0 });
   const positionRef = useRef({ x: 0, y: 0 });
   const containerRef = useRef(null);
@@ -25,7 +28,7 @@ const WebcamContainer = ({ onScreenshot }) => {
   // Calculate the maximum allowed movement based on zoom level
   const getBoundaries = useCallback(() => {
     if (!containerRef.current) return { maxX: 0, maxY: 0 };
-    
+
     const container = containerRef.current.getBoundingClientRect();
     // How much the content grows when zoomed
     const extraWidth = (container.width * zoom - container.width) / 2;
@@ -61,11 +64,11 @@ const WebcamContainer = ({ onScreenshot }) => {
 
   const handleDragStart = (e) => {
     if (zoom === 1) return;
-    
+
     e.preventDefault();
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    
+
     setIsDragging(true);
     dragStartRef.current = { x: clientX, y: clientY };
     positionRef.current = position;
@@ -76,7 +79,7 @@ const WebcamContainer = ({ onScreenshot }) => {
 
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    
+
     const deltaX = clientX - dragStartRef.current.x;
     const deltaY = clientY - dragStartRef.current.y;
 
@@ -84,7 +87,7 @@ const WebcamContainer = ({ onScreenshot }) => {
       positionRef.current.x + deltaX,
       positionRef.current.y + deltaY
     );
-    
+
     setPosition(newPosition);
   };
 
@@ -124,24 +127,24 @@ const WebcamContainer = ({ onScreenshot }) => {
     // Create a canvas element
     const canvas = document.createElement('canvas');
     const context = canvas.getContext('2d');
-    
+
     // Get the container dimensions
     const container = containerRef.current.getBoundingClientRect();
     canvas.width = container.width;
     canvas.height = container.height;
-    
+
     // Get the video element
     const video = videoRef.current;
-    
+
     // Calculate the visible portion based on zoom and position
     const scale = 1 / zoom;
     const visibleWidth = container.width * scale;
     const visibleHeight = container.height * scale;
-    
+
     // Calculate the source rectangle for the current view
     const sourceX = (video.videoWidth - visibleWidth) / 2 - (position.x / zoom);
     const sourceY = (video.videoHeight - visibleHeight) / 2 - (position.y / zoom);
-    
+
     // Draw the visible portion of the video
     context.filter = `
       contrast(${filters.contrast}%)
@@ -154,7 +157,7 @@ const WebcamContainer = ({ onScreenshot }) => {
       sourceX, sourceY, visibleWidth, visibleHeight,
       0, 0, canvas.width, canvas.height
     );
-    
+
     // Convert to blob and pass to callback
     canvas.toBlob((blob) => {
       if (blob && onScreenshot) {
@@ -167,7 +170,7 @@ const WebcamContainer = ({ onScreenshot }) => {
   };
 
   return (
-    <div 
+    <div
       ref={containerRef}
       className="webcam-container"
       onMouseMove={handleDrag}
@@ -177,26 +180,34 @@ const WebcamContainer = ({ onScreenshot }) => {
       onTouchEnd={handleDragEnd}
       onWheel={handleWheel}
     >
-      <div 
+      <div
         className="webcam-box"
         onMouseDown={handleDragStart}
         onTouchStart={handleDragStart}
         style={{ cursor: zoom > 1 ? (isDragging ? 'grabbing' : 'grab') : 'default' }}
       >
-        <WebcamFeed 
+        {/*  TODO UNCOMMENT THIS LATER */}
+        {/* <WebcamFeed 
           zoom={zoom} 
           position={position} 
           filters={filters} 
           videoRef={videoRef}
+        /> */}
+
+        <StreamingOnlyWebcamFeed
+          zoom={zoom}
+          position={position}
+          filters={filters}
+          streamId={streamId}
         />
-        
+
         {showFlash && <div className="screenshot-flash" />}
         {showNotification && (
           <div className="screenshot-notification">
             Screenshot added to note!
           </div>
         )}
-        
+
         <div className="controls-container">
           <ZoomControls zoomIn={zoomIn} zoomOut={zoomOut} />
           <ContrastControls onFilterChange={handleFilterChange} />

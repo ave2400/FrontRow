@@ -5,12 +5,18 @@ import WebcamContainer from "./components/WebcamContainer";
 import StickyNotes from "./components/StickyNotes";
 import SignIn from './components/SignIn';
 import SignUp from './components/SignUp';
+import AdminPage from './components/AdminPage';
 import './App.css';
 
 function App() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [currentNote, setCurrentNote] = useState({ title: "", content: "", images: [] });
+  
+  // Initialize streamId from localStorage if available
+  const [streamId, setStreamId] = useState(() => {
+    return localStorage.getItem('streamId') || "";
+  });
 
   useEffect(() => {
     // Get initial session
@@ -44,6 +50,17 @@ function App() {
     }
   };
 
+  const handleStreamIdSubmit = (newStreamId) => {
+    // Save to state
+    setStreamId(newStreamId);
+    
+    // Also save to localStorage for persistence
+    localStorage.setItem('streamId', newStreamId);
+    
+    // Log for debugging
+    console.log("App: Stream ID set to:", newStreamId);
+  };
+
   if (loading) {
     return <div className="loading">Loading...</div>;
   }
@@ -59,15 +76,18 @@ function App() {
                 <div className="app-container">
                   <div className="header">
                     <h1>FrontRow Notes</h1>
-                    <button
-                      className="btn btn-danger"
-                      onClick={() => supabase.auth.signOut()}
-                    >
-                      Sign Out
-                    </button>
+                      <button
+                        className="btn btn-danger"
+                        onClick={() => supabase.auth.signOut()}
+                      >
+                        Sign Out
+                      </button>
                   </div>
                   <div className="main-content">
-                    <WebcamContainer onScreenshot={handleScreenshot} />
+                    <WebcamContainer 
+                      onScreenshot={handleScreenshot} 
+                      streamId={streamId} 
+                    />
                     <StickyNotes 
                       currentNote={currentNote} 
                       setCurrentNote={setCurrentNote} 
@@ -98,6 +118,15 @@ function App() {
               ) : (
                 <Navigate to="/" replace />
               )
+            } 
+          />
+          <Route 
+            path="/admin" 
+            element={
+              <AdminPage 
+                onStreamIdSubmit={handleStreamIdSubmit} 
+                currentStreamId={streamId} 
+              />
             } 
           />
         </Routes>
