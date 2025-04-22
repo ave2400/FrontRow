@@ -1,7 +1,16 @@
 import React from "react";
 import "./WebcamFeed.css";
 
-const StreamingOnlyWebcamFeed = ({ zoom, position, filters, streamId, streamType = "youtube", isLoading }) => {
+const StreamingOnlyWebcamFeed = ({ 
+  zoom, 
+  position, 
+  filters, 
+  streamId, 
+  streamType = "youtube", 
+  isLoading,
+  videoRef,
+  iframeRef
+}) => {
   console.log("StreamingOnlyWebcamFeed streamId:", streamId, "type:", streamType);
   const {
     contrast = 100,
@@ -42,6 +51,7 @@ const StreamingOnlyWebcamFeed = ({ zoom, position, filters, streamId, streamType
         streamType === "youtube" ? (
           // YouTube stream embed
           <iframe
+            ref={iframeRef}
             width="100%"
             height="100%"
             src={`https://www.youtube.com/embed/${streamId}?autoplay=1&mute=0`}
@@ -53,6 +63,7 @@ const StreamingOnlyWebcamFeed = ({ zoom, position, filters, streamId, streamType
         ) : streamType === "zoom" ? (
           // Zoom meeting embed
           <iframe
+            ref={iframeRef}
             width="100%"
             height="100%"
             src={streamId}

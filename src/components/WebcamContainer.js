@@ -12,6 +12,7 @@ const WebcamContainer = ({ onScreenshot, streamId, streamType = "youtube", isLoa
   const [isDragging, setIsDragging] = useState(false);
   const [showFlash, setShowFlash] = useState(false);
   const [showNotification, setShowNotification] = useState(false);
+  const [isCapturing, setIsCapturing] = useState(false);
   const [filters, setFilters] = useState({
     contrast: 100,
     brightness: 100,
@@ -21,7 +22,6 @@ const WebcamContainer = ({ onScreenshot, streamId, streamType = "youtube", isLoa
   const dragStartRef = useRef({ x: 0, y: 0 });
   const positionRef = useRef({ x: 0, y: 0 });
   const containerRef = useRef(null);
-  const videoRef = useRef(null);
 
   // Calculate the maximum allowed movement based on zoom level
   const getBoundaries = useCallback(() => {
@@ -115,56 +115,85 @@ const WebcamContainer = ({ onScreenshot, streamId, streamType = "youtube", isLoa
     setFilters(newFilters);
   };
 
-  const takeScreenshot = () => {
-    if (!videoRef.current || !containerRef.current) return;
-
-    // Show flash effect
-    setShowFlash(true);
-    setTimeout(() => setShowFlash(false), 200);
-
-    // Create a canvas element
-    const canvas = document.createElement('canvas');
-    const context = canvas.getContext('2d');
-
-    // Get the container dimensions
-    const container = containerRef.current.getBoundingClientRect();
-    canvas.width = container.width;
-    canvas.height = container.height;
-
-    // Get the video element
-    const video = videoRef.current;
-
-    // Calculate the visible portion based on zoom and position
-    const scale = 1 / zoom;
-    const visibleWidth = container.width * scale;
-    const visibleHeight = container.height * scale;
-
-    // Calculate the source rectangle for the current view
-    const sourceX = (video.videoWidth - visibleWidth) / 2 - (position.x / zoom);
-    const sourceY = (video.videoHeight - visibleHeight) / 2 - (position.y / zoom);
-
-    // Draw the visible portion of the video
-    context.filter = `
-      contrast(${filters.contrast}%)
-      brightness(${filters.brightness}%)
-      grayscale(${filters.grayscale}%)
-      invert(${filters.invert}%)
-    `;
-    context.drawImage(
-      video,
-      sourceX, sourceY, visibleWidth, visibleHeight,
-      0, 0, canvas.width, canvas.height
-    );
-
-    // Convert to blob and pass to callback
-    canvas.toBlob((blob) => {
+  // Use browser API to capture current tab
+  const takeScreenshot = async () => {
+    try {
+      setIsCapturing(true);
+      
+      // Show flash effect
+      setShowFlash(true);
+      setTimeout(() => setShowFlash(false), 200);
+      
+      // Request screen capture with specific displaySurface preference
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: { 
+          cursor: "never",
+          displaySurface: "browser" // Prioritize capturing the browser tab
+        },
+        audio: false,
+        preferCurrentTab: true, // Chrome 103+ and Edge support this
+        selfBrowserSurface: "include" // Firefox supports this
+      });
+      
+      // Create video element to capture a frame
+      const video = document.createElement('video');
+      video.srcObject = stream;
+      
+      // Wait for video to load
+      await new Promise(resolve => {
+        video.onloadedmetadata = () => {
+          video.play();
+          resolve();
+        };
+      });
+      
+      // Wait a moment for the video to start playing
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Capture a frame
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0);
+      
+      // Apply filters to match the current view
+      const filteredCanvas = document.createElement('canvas');
+      filteredCanvas.width = canvas.width;
+      filteredCanvas.height = canvas.height;
+      const filteredCtx = filteredCanvas.getContext('2d');
+      
+      // Apply CSS filters
+      filteredCtx.filter = `
+        contrast(${filters.contrast}%)
+        brightness(${filters.brightness}%)
+        grayscale(${filters.grayscale}%)
+        invert(${filters.invert}%)
+      `;
+      
+      filteredCtx.drawImage(canvas, 0, 0);
+      
+      // Stop all tracks
+      stream.getTracks().forEach(track => track.stop());
+      
+      // Convert to blob
+      const blob = await new Promise(resolve => {
+        filteredCanvas.toBlob(resolve, 'image/png', 1.0);
+      });
+      
+      // Pass to callback
       if (blob && onScreenshot) {
         onScreenshot(blob);
         // Show notification
         setShowNotification(true);
         setTimeout(() => setShowNotification(false), 2000);
       }
-    }, 'image/png', 1.0);
+    } catch (err) {
+      console.error("Error capturing screen:", err);
+      // User may have canceled the screen selection
+    } finally {
+      setIsCapturing(false);
+    }
   };
 
   return (
@@ -207,8 +236,9 @@ const WebcamContainer = ({ onScreenshot, streamId, streamType = "youtube", isLoa
             onClick={takeScreenshot}
             className="btn btn-icon"
             title="Take Screenshot"
+            disabled={isCapturing}
           >
-            📸
+            {isCapturing ? '⏳' : '📸'}
           </button>
         </div>
       </div>
