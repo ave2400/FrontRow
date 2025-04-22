@@ -4,6 +4,7 @@ import { supabase } from './supabaseClient';
 import { streamService } from './services/streamService';
 import WebcamContainer from "./components/WebcamContainer";
 import StickyNotes from "./components/StickyNotes";
+import AIAssistant from "./components/AIAssistant";
 import SignIn from './components/SignIn';
 import SignUp from './components/SignUp';
 import AdminPage from './components/AdminPage';
@@ -171,6 +172,7 @@ function App() {
                       setCurrentNote={setCurrentNote} 
                       onScreenshot={handleScreenshot}
                     />
+                    <AIAssistant currentNote={currentNote} />
                   </div>
                 </div>
               ) : (
