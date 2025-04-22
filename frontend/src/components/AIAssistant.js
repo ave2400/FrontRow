@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import './AIAssistant.css';
 
-const API_URL = 'http://localhost:5000/api/ai/assistant';
+const API_URL = `${process.env.REACT_APP_BACKEND}/api/ai/assistant`;
+// console.log(`HELLO LOOK AT ME, this is BACKEND: ${process.env.REACT_APP_BACKEND}`);
 
 const AIAssistant = ({ currentNote }) => {
   const [showAssistant, setShowAssistant] = useState(false);
