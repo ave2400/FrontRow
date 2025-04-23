@@ -12,7 +12,20 @@ const openai = new OpenAI({
 });
 
 // Middleware
-app.use(cors());
+const allowedOrigins = ['http://localhost:3000', 'https://frontrow-frontend.vercel.app'];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  methods: ['GET', 'POST', 'OPTIONS'],
+  credentials: true
+}));
+
 app.use(express.json());
 
 // Concept bank with embeddings
