@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { streamService } from "../services/streamService";
+// import { streamService } from "../services/streamService";
 import "./AdminPage.css";
+
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 const AdminPage = ({ currentStreamId, currentStreamType, isLoading }) => {
   const [streamId, setStreamId] = useState(currentStreamId || "");
@@ -24,8 +26,12 @@ const AdminPage = ({ currentStreamId, currentStreamType, isLoading }) => {
     const fetchStreamType = async () => {
       if (currentStreamType === undefined) {
         try {
-          const type = await streamService.getStreamType();
-          setStreamType(type);
+          const response = await fetch(`${API_BASE_URL}/api/stream/type`, {
+            credentials: 'include'
+          });
+          if (!response.ok) throw new Error('Failed to fetch stream type');
+          const data = await response.json();
+          setStreamType(data.streamType);
         } catch (error) {
           console.error("Error fetching stream type:", error);
         }
@@ -43,15 +49,19 @@ const AdminPage = ({ currentStreamId, currentStreamType, isLoading }) => {
       setErrorMessage("");
       setUpdating(true);
       
-      // Call the streamService to update settings
-      const success = await streamService.updateStreamConfig(streamId, streamType);
+      const response = await fetch(`${API_BASE_URL}/api/stream/config`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ streamId, streamType })
+      });
+
+      if (!response.ok) throw new Error('Failed to update stream settings');
       
-      if (success) {
-        setSuccessMessage("Stream settings saved successfully!");
-        setTimeout(() => setSuccessMessage(""), 3000);
-      } else {
-        setErrorMessage("Failed to update stream settings. Please try again.");
-      }
+      setSuccessMessage("Stream settings saved successfully!");
+      setTimeout(() => setSuccessMessage(""), 3000);
     } catch (error) {
       console.error("Error updating stream settings:", error);
       setErrorMessage("An error occurred. Please try again.");
