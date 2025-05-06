@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from "react";
-// import { streamService } from "../services/streamService";
 import "./AdminPage.css";
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+const API_BASE_URL = process.env.REACT_APP_BACKEND || 'http://localhost:5000';
 
 const AdminPage = ({ currentStreamId, currentStreamType, isLoading }) => {
   const [streamId, setStreamId] = useState(currentStreamId || "");
