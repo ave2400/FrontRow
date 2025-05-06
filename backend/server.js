@@ -1,7 +1,9 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const assistantService = require('./assistant');
+const bodyParser = require('body-parser');
+
+const assistantService = require('./assistantService');
 const streamService = require('./streamService');
 const authMiddleware = require('./middleware/auth');
 
@@ -24,113 +26,156 @@ app.use(cors({
 }));
 
 app.use(express.json());
+// app.use(bodyParser.json()); // TODO: idk if we need this (depends on if we use bodyParser.json explicitly in our routes)
 
-// AI Assistant Routes
-app.post('/api/ai/assistant', async (req, res) => {
+let assistantServiceInstance;
+
+// Main function to initialize services and start the server
+async function main() {
   try {
-    const { action, content, concept } = req.body;
+    assistantServiceInstance = await assistantService();
+    console.log("Assistant service initialized successfully.");
 
-    switch (action) {
-      case 'checkConcepts':
-        const result = await assistantService.checkConcepts(content);
-        return res.json(result);
+    // Define routes that depend on assistantServiceInstance inside here
+    // or ensure they are only called after initialization
 
-      case 'getExplanation':
-        const explanation = await assistantService.getExplanation(concept);
-        return res.json(explanation);
+    // AI Assistant Routes
+    app.post('/api/ai/assistant', async (req, res) => {
+      if (!assistantServiceInstance) {
+        console.error("AI Assistant service not ready.");
+        return res.status(503).json({ error: "Service not available, please try again shortly." });
+      }
+      try {
+        const { action, content, concept, lastContent } = req.body; // Added lastContent
 
-      case 'getPracticeQuestion':
-        const question = await assistantService.getPracticeQuestion(concept);
-        return res.json(question);
+        switch (action) {
+          case 'checkConcepts':
+            // Pass lastContent if available, assistantService.checkConcepts has a default
+            const checkConceptsOptions = lastContent ? { lastContent } : {};
+            const result = await assistantServiceInstance.checkConcepts(content, checkConceptsOptions);
+            // When a concept is detected and will be shown, mark it.
+            // The client should ideally call a specific endpoint like /mark-shown after displaying the prompt.
+            // For simplicity now, if a concept is detected, we can assume it might be shown.
+            // However, this is better handled by a specific client action.
+            // if (result.detectedConcept) {
+            //   assistantServiceInstance.markConceptAsShown(result.detectedConcept.name);
+            // }
+            return res.json(result);
 
-      default:
-        return res.status(400).json({ error: 'Invalid action' });
-    }
+          case 'getExplanation':
+            const explanation = await assistantServiceInstance.getExplanation(concept);
+            return res.json(explanation);
+
+          case 'getPracticeQuestion':
+            const question = await assistantServiceInstance.getPracticeQuestion(concept);
+            return res.json(question);
+
+          // Add a new case for explicitly marking a concept as shown (for cooldown)
+          case 'markConceptAsShown':
+            if (concept && concept.name) {
+                assistantServiceInstance.markConceptAsShown(concept.name);
+                return res.json({ message: `Concept '${concept.name}' marked as shown.` });
+            }
+            return res.status(400).json({ error: 'Invalid concept name for marking as shown.' });
+
+          default:
+            return res.status(400).json({ error: 'Invalid action' });
+        }
+      } catch (error) {
+        console.error('Error in AI assistant API (/api/ai/assistant):', error);
+        return res.status(500).json({ error: 'Internal server error in AI assistant' });
+      }
+    });
+
+    // Stream API Routes (These seem independent of assistantService, so they are fine)
+    app.get('/api/stream/config', authMiddleware, async (req, res) => {
+      try {
+        const config = await streamService.getStreamConfig();
+        res.json(config);
+      } catch (error) {
+        console.error('Error fetching stream config:', error);
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    });
+
+    app.post('/api/stream/config', authMiddleware, async (req, res) => {
+      try {
+        const { streamId, streamType } = req.body;
+        const success = await streamService.updateStreamConfig(streamId, streamType);
+        
+        if (success) {
+          res.json({ message: 'Stream configuration updated successfully' });
+        } else {
+          res.status(500).json({ error: 'Failed to update stream configuration' });
+        }
+      } catch (error) {
+        console.error('Error updating stream config:', error);
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    });
+
+    app.get('/api/stream/id', authMiddleware, async (req, res) => {
+      try {
+        const streamId = await streamService.getStreamId();
+        res.json({ streamId });
+      } catch (error) {
+        console.error('Error fetching stream ID:', error);
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    });
+
+    app.post('/api/stream/id', authMiddleware, async (req, res) => {
+      try {
+        const { streamId } = req.body;
+        const success = await streamService.updateStreamId(streamId);
+        
+        if (success) {
+          res.json({ message: 'Stream ID updated successfully' });
+        } else {
+          res.status(500).json({ error: 'Failed to update stream ID' });
+        }
+      } catch (error) {
+        console.error('Error updating stream ID:', error);
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    });
+
+    app.get('/api/stream/type', authMiddleware, async (req, res) => {
+      try {
+        const streamType = await streamService.getStreamType();
+        res.json({ streamType });
+      } catch (error) {
+        console.error('Error fetching stream type:', error);
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    });
+
+    app.post('/api/stream/type', authMiddleware, async (req, res) => {
+      try {
+        const { streamType } = req.body;
+        const success = await streamService.updateStreamType(streamType);
+        
+        if (success) {
+          res.json({ message: 'Stream type updated successfully' });
+        } else {
+          res.status(500).json({ error: 'Failed to update stream type' });
+        }
+      } catch (error) {
+        console.error('Error updating stream type:', error);
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    });
+
+    // Start the server after everything is initialized
+    app.listen(port, () => {
+      console.log(`Server running on port ${port}`);
+    });
+
   } catch (error) {
-    console.error('Error in AI assistant API:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    console.error("Failed to start the server or initialize services:", error);
+    process.exit(1); // Exit if critical initialization fails
   }
-});
+}
 
-// Stream API Routes
-app.get('/api/stream/config', authMiddleware, async (req, res) => {
-  try {
-    const config = await streamService.getStreamConfig();
-    res.json(config);
-  } catch (error) {
-    console.error('Error fetching stream config:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-app.post('/api/stream/config', authMiddleware, async (req, res) => {
-  try {
-    const { streamId, streamType } = req.body;
-    const success = await streamService.updateStreamConfig(streamId, streamType);
-    
-    if (success) {
-      res.json({ message: 'Stream configuration updated successfully' });
-    } else {
-      res.status(500).json({ error: 'Failed to update stream configuration' });
-    }
-  } catch (error) {
-    console.error('Error updating stream config:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-app.get('/api/stream/id', authMiddleware, async (req, res) => {
-  try {
-    const streamId = await streamService.getStreamId();
-    res.json({ streamId });
-  } catch (error) {
-    console.error('Error fetching stream ID:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-app.post('/api/stream/id', authMiddleware, async (req, res) => {
-  try {
-    const { streamId } = req.body;
-    const success = await streamService.updateStreamId(streamId);
-    
-    if (success) {
-      res.json({ message: 'Stream ID updated successfully' });
-    } else {
-      res.status(500).json({ error: 'Failed to update stream ID' });
-    }
-  } catch (error) {
-    console.error('Error updating stream ID:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-app.get('/api/stream/type', authMiddleware, async (req, res) => {
-  try {
-    const streamType = await streamService.getStreamType();
-    res.json({ streamType });
-  } catch (error) {
-    console.error('Error fetching stream type:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-app.post('/api/stream/type', authMiddleware, async (req, res) => {
-  try {
-    const { streamType } = req.body;
-    const success = await streamService.updateStreamType(streamType);
-    
-    if (success) {
-      res.json({ message: 'Stream type updated successfully' });
-    } else {
-      res.status(500).json({ error: 'Failed to update stream type' });
-    }
-  } catch (error) {
-    console.error('Error updating stream type:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
-}); 
+// Call the main function to start the application
+main();

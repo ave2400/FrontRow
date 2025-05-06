@@ -1,0 +1,20 @@
+{
+    "finance": {
+      "CAPM": { "prompt": "Do you want a 1-min breakdown of CAPM? Here's a quick example!" },
+      "Time Value of Money": { "prompt": "Need help understanding Time Value of Money? I can break it down for you!" },
+      "Compound Interest": { "prompt": "Curious about how compound interest works? I can explain!" },
+      "Diversification": { "prompt": "Want to understand diversification in investments? Let's break it down."}
+    },
+    "biology": {
+      "Mitochondria": { "prompt": "Need a refresher on what mitochondria do? Want an analogy?" },
+      "DNA Replication": { "prompt": "Confused about DNA replication? I can help explain the process!" },
+      "Photosynthesis": { "prompt": "What's the deal with photosynthesis? I can clarify!" },
+      "Cellular Respiration": { "prompt": "How do cells get energy? Learn about cellular respiration." }
+    },
+    "computerScience": {
+      "Binary Search": { "prompt": "Need help understanding binary search? I can explain with examples!" },
+      "Recursion": { "prompt": "Struggling with recursion? Let me help you understand it better!" },
+      "Data Structures": { "prompt": "What are data structures and why are they important? I can give an overview." },
+      "API": { "prompt": "Hearing about APIs everywhere? Let me explain what they are." }
+    }
+  }
