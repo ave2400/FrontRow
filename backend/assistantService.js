@@ -34,11 +34,11 @@ async function loadConceptBank() {
       // Running that will generate the conceptEmbeddings.json file
       console.log("Please run the `generate_embeddings.js` script first.");
       // Fallback to an empty structure to prevent runtime errors deeper in the code
-      conceptBank = { finance: {}, biology: {}, computerScience: {} };
+      conceptBank = { finance: {}, biology: {}, computerScience: {}, history: {}, math: {}, philosophy: {}, literature: {}, psychology: {}, art: {} };
     }
   } catch (error) {
     console.error("Error loading concept bank from file:", error);
-    conceptBank = { finance: {}, biology: {}, computerScience: {} }; // Fallback
+    conceptBank = { finance: {}, biology: {}, computerScience: {}, history: {}, math: {}, philosophy: {}, literature: {}, psychology: {}, art: {} }; // Fallback
   }
   isConceptBankInitialized = true;
 }

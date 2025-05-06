@@ -1,20 +1,82 @@
 {
     "finance": {
-      "CAPM": { "prompt": "Do you want a 1-min breakdown of CAPM? Here's a quick example!" },
-      "Time Value of Money": { "prompt": "Need help understanding Time Value of Money? I can break it down for you!" },
-      "Compound Interest": { "prompt": "Curious about how compound interest works? I can explain!" },
-      "Diversification": { "prompt": "Want to understand diversification in investments? Let's break it down."}
+        "CAPM": { "prompt": "Do you want a 1-min breakdown of CAPM? Here's a quick example!" },
+        "Time Value of Money": { "prompt": "Need help understanding Time Value of Money? I can break it down for you!" },
+        "Compound Interest": { "prompt": "Curious about how compound interest works? I can explain!" },
+        "Diversification": { "prompt": "Want to understand diversification in investments? Let's break it down." },
+        "Risk Management": { "prompt": "What is risk management in finance? Let me explain the strategies!" },
+        "Stock Valuation": { "prompt": "Need help with stock valuation? I can break down the process for you." }
     },
+    
     "biology": {
-      "Mitochondria": { "prompt": "Need a refresher on what mitochondria do? Want an analogy?" },
-      "DNA Replication": { "prompt": "Confused about DNA replication? I can help explain the process!" },
-      "Photosynthesis": { "prompt": "What's the deal with photosynthesis? I can clarify!" },
-      "Cellular Respiration": { "prompt": "How do cells get energy? Learn about cellular respiration." }
+        "Mitochondria": { "prompt": "Need a refresher on what mitochondria do? Want an analogy?" },
+        "DNA Replication": { "prompt": "Confused about DNA replication? I can help explain the process!" },
+        "Photosynthesis": { "prompt": "What's the deal with photosynthesis? I can clarify!" },
+        "Cellular Respiration": { "prompt": "How do cells get energy? Learn about cellular respiration." },
+        "Genetic Inheritance": { "prompt": "How do traits get passed down through generations? I can explain genetic inheritance!" },
+        "Evolution": { "prompt": "Curious about evolution? Let's discuss the theory and evidence behind it!" }
     },
+
     "computerScience": {
-      "Binary Search": { "prompt": "Need help understanding binary search? I can explain with examples!" },
-      "Recursion": { "prompt": "Struggling with recursion? Let me help you understand it better!" },
-      "Data Structures": { "prompt": "What are data structures and why are they important? I can give an overview." },
-      "API": { "prompt": "Hearing about APIs everywhere? Let me explain what they are." }
+        "Binary Search": { "prompt": "Need help understanding binary search? I can explain with examples!" },
+        "Recursion": { "prompt": "Struggling with recursion? Let me help you understand it better!" },
+        "Data Structures": { "prompt": "What are data structures and why are they important? I can give an overview." },
+        "API": { "prompt": "Hearing about APIs everywhere? Let me explain what they are." },
+        "Big O Notation": { "prompt": "What is Big O notation and why does it matter for algorithms? Let me explain!" },
+        "Object-Oriented Programming": { "prompt": "Confused about object-oriented programming (OOP)? I can break it down for you!" }
+    },
+    
+    "history": {
+        "World War I": { "prompt": "Want a quick overview of World War I? I can explain the major events and causes!" },
+        "Ancient Egypt": { "prompt": "Curious about Ancient Egypt? Let's dive into its culture, pharaohs, and pyramids!" },
+        "Renaissance": { "prompt": "What was the Renaissance and why is it significant? Let me take you through this fascinating period!" },
+        "American Revolution": { "prompt": "Want to know what sparked the American Revolution? I can summarize the key moments!" },
+        "Cold War": { "prompt": "What was the Cold War? Let me give you a breakdown of its causes and effects!" },
+        "French Revolution": { "prompt": "What led to the French Revolution? I can give you the historical context and key events!" }
+    },
+    
+    "math": {
+        "Pythagorean Theorem": { "prompt": "Need help with the Pythagorean Theorem? I can explain it with examples!" },
+        "Calculus Basics": { "prompt": "Curious about calculus? Let's go over derivatives and integrals in a simple way!" },
+        "Linear Algebra": { "prompt": "Want to understand linear algebra? I can break down vectors, matrices, and more!" },
+        "Probability": { "prompt": "What is probability and how do you calculate it? I can help you out!" },
+        "Trigonometry": { "prompt": "Struggling with trigonometry? I can explain sine, cosine, and tangent!" },
+        "Statistics": { "prompt": "Need help with statistics? Let me explain concepts like mean, median, and standard deviation!" }
+    },
+    
+    "philosophy": {
+        "Ethics": { "prompt": "What is ethics and why does it matter? Let's talk about moral theories like utilitarianism and deontology!" },
+        "Existentialism": { "prompt": "Curious about existentialism? I can explain key ideas from philosophers like Sartre and Camus!" },
+        "Plato's Theory of Forms": { "prompt": "What is Plato's Theory of Forms? Let me break down this fundamental idea in philosophy!" },
+        "Stoicism": { "prompt": "What is Stoicism and how can it improve your life? Let's explore its key principles!" },
+        "Epistemology": { "prompt": "What is epistemology? Let's talk about the study of knowledge and belief!" },
+        "Philosophy of Mind": { "prompt": "What is the philosophy of mind? Let's discuss questions about consciousness and thought!" }
+    },
+    
+    "literature": {
+        "Shakespeare's Works": { "prompt": "Need a quick overview of Shakespeare's works? Let's explore his plays and themes!" },
+        "Poetry Analysis": { "prompt": "Struggling with poetry? I can help you analyze poems and their meanings!" },
+        "Modernism in Literature": { "prompt": "What is Modernism in literature? Let me explain its major themes and key authors!" },
+        "Character Archetypes": { "prompt": "What are character archetypes in literature? I can help you identify common types!" },
+        "Dystopian Fiction": { "prompt": "Curious about dystopian fiction? Let's explore books like '1984' and 'Brave New World'!" },
+        "Literary Devices": { "prompt": "What are literary devices? I can break down metaphors, symbolism, and more!" }
+    },
+
+    "psychology": {
+        "Cognitive Biases": { "prompt": "What are cognitive biases and how do they affect decision-making? Let's explore!" },
+        "Freud's Psychoanalysis": { "prompt": "What is Freud's psychoanalysis theory? Let me break it down for you!" },
+        "Maslow's Hierarchy of Needs": { "prompt": "What is Maslow's Hierarchy of Needs? Let me explain this motivational theory!" },
+        "Behaviorism": { "prompt": "What is behaviorism in psychology? Let's talk about Pavlov, Skinner, and their ideas!" },
+        "Developmental Psychology": { "prompt": "What is developmental psychology? Let's discuss human development through the life span!" },
+        "Social Psychology": { "prompt": "What is social psychology? Let's talk about how people behave in groups!" }
+    },
+
+    "art": {
+        "Renaissance Art": { "prompt": "What defines Renaissance art? Let's explore the works of Michelangelo and Leonardo da Vinci!" },
+        "Impressionism": { "prompt": "What is Impressionism in art? Let me explain its style and famous artists!" },
+        "Cubism": { "prompt": "What is Cubism and how did Picasso and Braque revolutionize art? Let's dive in!" },
+        "Abstract Expressionism": { "prompt": "What is Abstract Expressionism? Let me explain this unique art movement!" },
+        "Art Movements": { "prompt": "Want to know about major art movements like Baroque, Rococo, and Surrealism? I can break them down!" },
+        "Famous Sculptures": { "prompt": "Curious about famous sculptures like Michelangelo's David or Rodin's The Thinker? Let's talk about them!" }
     }
-  }
+}
