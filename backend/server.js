@@ -46,7 +46,7 @@ async function main() {
         return res.status(503).json({ error: "Service not available, please try again shortly." });
       }
       try {
-        const { action, content, concept, lastContent } = req.body; // Added lastContent
+        const { action, content, concept, lastContent, imageUrl } = req.body; // Added imageUrl
 
         switch (action) {
           case 'checkConcepts':
@@ -69,6 +69,13 @@ async function main() {
           case 'getPracticeQuestion':
             const question = await assistantServiceInstance.getPracticeQuestion(concept);
             return res.json(question);
+
+          case 'getImageSummary':
+            if (!imageUrl) {
+              return res.status(400).json({ error: 'Image URL is required' });
+            }
+            const summary = await assistantServiceInstance.getImageSummary(imageUrl);
+            return res.json(summary);
 
           // Add a new case for explicitly marking a concept as shown (for cooldown)
           case 'markConceptAsShown':

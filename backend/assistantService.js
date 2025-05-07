@@ -164,6 +164,32 @@ const assistantService = {
     }
   },
 
+  async getImageSummary(imageUrl) {
+    try {
+      const response = await openai.chat.completions.create({
+        model: "gpt-4-vision-preview",
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: "Please provide a detailed summary of this image, focusing on any educational content, diagrams, or important concepts shown." },
+              {
+                type: "image_url",
+                image_url: imageUrl
+              }
+            ]
+          }
+        ],
+        max_tokens: 500
+      });
+
+      return { response: response.choices[0].message.content };
+    } catch (error) {
+      console.error("Error getting image summary:", error);
+      return { response: "Sorry, I couldn't analyze the image at this time." };
+    }
+  },
+
   async getExplanation(concept) {
     // No changes needed here, but ensure concept is valid
     if (!concept || !concept.name || !concept.category) {
