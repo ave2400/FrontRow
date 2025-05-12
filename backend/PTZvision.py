@@ -1,5 +1,6 @@
 # tester file to ensure the connection from JS to Python is working
 # PTZvision.py
+# will also contain the main logic for imitiating PTZ based on image/video recognition cues through smooth zooming 
 import sys
 
 def main():
