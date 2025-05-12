@@ -56,16 +56,24 @@ function App() {
       
       setStreamLoading(true);
       try {
-        console.log("Fetching stream config from backend...");
+        const { data: { session: currentAuthSession }, error: sessionError } = await supabase.auth.getSession();
+        let headers = { 'Content-Type': 'application/json' };
+        if (currentAuthSession?.access_token) {
+          headers['Authorization'] = `Bearer ${currentAuthSession.access_token}`;
+        } else {
+          console.warn("No active session token for fetching stream config. Endpoint might fail if protected.");
+        }
+
         const response = await fetch(`${API_BASE_URL}/api/stream/config`, {
+          method: 'GET', 
+          headers: headers,
           credentials: 'include'
         });
-        
-        if (!response.ok) throw new Error('Failed to fetch stream config');
-        
+
+        if (!response.ok) throw new Error(`Failed to fetch stream config, status: ${response.status}`);
         const config = await response.json();
-        console.log("Stream config fetched:", config);
-        
+        console.log("Stream config fetched from backend:", config);
+
         if (isActive) {
           setStreamId(config.id);
           setStreamType(config.type);
@@ -107,12 +115,12 @@ function App() {
   };
 
   // Debug render
-  console.log("Rendering App with:", { 
-    isLoading: loading, 
-    hasSession: !!session, 
-    streamId, 
+  console.log("Rendering App with:", {
+    isLoading: loading,
+    hasSession: !!session,
+    streamId,
     streamType,
-    isStreamLoading: streamLoading 
+    isStreamLoading: streamLoading
   });
 
   if (loading) {
@@ -123,8 +131,8 @@ function App() {
     <div className="App">
       <Router>
         <Routes>
-          <Route 
-            path="/" 
+          <Route
+            path="/"
             element={
               session ? (
                 <div className="app-container">
@@ -143,16 +151,16 @@ function App() {
                     {streamLoading ? (
                       <div className="stream-loading">Loading stream settings...</div>
                     ) : (
-                      <WebcamContainer 
-                        onScreenshot={handleScreenshot} 
+                      <WebcamContainer
+                        onScreenshot={handleScreenshot}
                         streamId={streamId}
                         streamType={streamType}
                         isLoading={false}
                       />
                     )}
-                    <StickyNotes 
-                      currentNote={currentNote} 
-                      setCurrentNote={setCurrentNote} 
+                    <StickyNotes
+                      currentNote={currentNote}
+                      setCurrentNote={setCurrentNote}
                       onScreenshot={handleScreenshot}
                     />
                     <AIAssistant currentNote={currentNote} />
@@ -161,37 +169,37 @@ function App() {
               ) : (
                 <Navigate to="/signin" replace />
               )
-            } 
+            }
           />
-          <Route 
-            path="/signin" 
+          <Route
+            path="/signin"
             element={
               !session ? (
                 <SignIn />
               ) : (
                 <Navigate to="/" replace />
               )
-            } 
+            }
           />
-          <Route 
-            path="/signup" 
+          <Route
+            path="/signup"
             element={
               !session ? (
                 <SignUp />
               ) : (
                 <Navigate to="/" replace />
               )
-            } 
+            }
           />
-          <Route 
-            path="/admin" 
+          <Route
+            path="/admin"
             element={
-              <AdminPage 
+              <AdminPage
                 currentStreamId={streamId}
                 currentStreamType={streamType}
                 isLoading={streamLoading}
               />
-            } 
+            }
           />
         </Routes>
       </Router>

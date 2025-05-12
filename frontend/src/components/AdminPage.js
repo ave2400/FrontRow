@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import "./AdminPage.css";
+import { supabase } from '../supabaseClient.js';
 
 const API_BASE_URL = process.env.REACT_APP_BACKEND || 'http://localhost:5000';
 
@@ -42,23 +43,43 @@ const AdminPage = ({ currentStreamId, currentStreamType, isLoading }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     try {
       setSuccessMessage("");
       setErrorMessage("");
       setUpdating(true);
-      
+
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+      if (sessionError || !session) {
+        throw new Error(sessionError?.message || 'User not authenticated. Please sign in again.');
+      }
+
+      const accessToken = session.access_token;
+
       const response = await fetch(`${API_BASE_URL}/api/stream/config`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`
+
         },
         credentials: 'include',
         body: JSON.stringify({ streamId, streamType })
       });
 
-      if (!response.ok) throw new Error('Failed to update stream settings');
-      
+      if (!response.ok) {
+        let errorDetails = `Failed to update stream settings. Status: ${response.status}`;
+        try {
+          const errorData = await response.json();
+          if (errorData && errorData.message) {
+            errorDetails = errorData.message;
+          }
+        } catch (e) {
+          console.warn("Could not parse error response as JSON", e);
+        }
+        throw new Error(errorDetails);
+      }
       setSuccessMessage("Stream settings saved successfully!");
       setTimeout(() => setSuccessMessage(""), 3000);
     } catch (error) {
@@ -83,15 +104,16 @@ const AdminPage = ({ currentStreamId, currentStreamType, isLoading }) => {
   // Preview component based on stream type
   const renderPreview = () => {
     if (!streamId) return null;
-    
+
     if (streamType === "youtube") {
       return (
         <iframe
           width="100%"
           height="100%"
           src={`https://www.youtube.com/embed/${streamId}?autoplay=0`}
+          title="YouTube video player"
           frameBorder="0"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
           allowFullScreen
         ></iframe>
       );
@@ -101,14 +123,15 @@ const AdminPage = ({ currentStreamId, currentStreamType, isLoading }) => {
           width="100%"
           height="100%"
           src={streamId}
+          title="Zoom meeting"
           frameBorder="0"
           allow="microphone; camera; autoplay; fullscreen; display-capture"
           allowFullScreen
         ></iframe>
       );
     }
-    
-    return <div>Unknown stream type</div>;
+
+    return <div>Unknown stream type or missing Stream ID for preview.</div>;
   };
 
   // Help text based on stream type
@@ -116,19 +139,20 @@ const AdminPage = ({ currentStreamId, currentStreamType, isLoading }) => {
     if (streamType === "youtube") {
       return (
         <p className="help-text">
-          For example, if your YouTube URL is https://www.youtube.com/watch?v=dQw4w9WgXcQ, 
-          the Stream ID is <code>dQw4w9WgXcQ</code>
+          Enter the YouTube Video ID. For example, if your YouTube video URL is
+          <code>https://www.youtube.com/watch?v=dQw4w9WgXcQ</code>,
+          the Video ID is <code>dQw4w9WgXcQ</code>.
         </p>
       );
     } else if (streamType === "zoom") {
       return (
         <p className="help-text">
-          Enter the full Zoom meeting URL from the "Join from your browser" link. For example: 
-          <code>https://zoom.us/wc/join/1234567890?pwd=abcdef</code>
+          Enter the full Zoom meeting URL obtained from the "Join from your browser" option. 
+          If your link contains PWA=1, remove this from the link.
+          For example: <code>https://zoom.us/wc/join/1234567890?pwd=abcdef</code>
         </p>
       );
     }
-    
     return null;
   };
 
@@ -139,7 +163,7 @@ const AdminPage = ({ currentStreamId, currentStreamType, isLoading }) => {
     } else if (streamType === "zoom") {
       return "Zoom Meeting URL:";
     }
-    
+
     return "Stream ID:";
   };
 
@@ -150,7 +174,7 @@ const AdminPage = ({ currentStreamId, currentStreamType, isLoading }) => {
     } else if (streamType === "zoom") {
       return "Enter Zoom Meeting URL (from 'Join from browser' link)";
     }
-    
+
     return "Enter Stream ID";
   };
 
@@ -158,7 +182,7 @@ const AdminPage = ({ currentStreamId, currentStreamType, isLoading }) => {
     <div className="admin-page">
       <div className="admin-container">
         <h2>Stream Settings</h2>
-        
+
         {streamId && (
           <div className="stream-preview">
             <h3>Stream Preview</h3>
@@ -167,7 +191,7 @@ const AdminPage = ({ currentStreamId, currentStreamType, isLoading }) => {
             </div>
           </div>
         )}
-        
+
         <form onSubmit={handleSubmit} className="stream-form">
           <div className="form-group">
             <label htmlFor="streamType">Stream Type:</label>
@@ -182,7 +206,7 @@ const AdminPage = ({ currentStreamId, currentStreamType, isLoading }) => {
               <option value="zoom">Zoom Meeting</option>
             </select>
           </div>
-          
+
           <div className="form-group">
             <label htmlFor="streamId">{getInputLabel()}</label>
             <div className="input-group">
@@ -195,8 +219,8 @@ const AdminPage = ({ currentStreamId, currentStreamType, isLoading }) => {
                 required
                 disabled={updating}
               />
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 className="submit-btn"
                 disabled={updating}
               >
@@ -205,16 +229,16 @@ const AdminPage = ({ currentStreamId, currentStreamType, isLoading }) => {
             </div>
             {getHelpText()}
           </div>
-          
+
           {successMessage && (
             <div className="success-message">{successMessage}</div>
           )}
-          
+
           {errorMessage && (
             <div className="error-message">{errorMessage}</div>
           )}
         </form>
-        
+
         <div className="admin-actions">
           <a href="/" className="back-link">Back to Main Page</a>
         </div>

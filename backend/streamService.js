@@ -1,17 +1,16 @@
 const { createClient } = require('@supabase/supabase-js');
+require('dotenv').config(); 
 
-// Initialize Supabase client
-if (!process.env.REACT_APP_SUPABASE_URL || !process.env.REACT_APP_SUPABASE_ANON_KEY) {
-  console.error('Missing Supabase configuration. You have not set REACT_APP_SUPABASE_URL and REACT_APP_SUPABASE_ANON_KEY in your .env file');
-  process.exit(1);
+if (!process.env.REACT_APP_SUPABASE_URL || !process.env.REACT_APP_SUPABASE_SERVICE_ROLE_KEY) {
+  console.error('Missing Supabase configuration for streamService: REACT_APP_SUPABASE_URL and/or REACT_APP_SUPABASE_SERVICE_ROLE_KEY are not set in .env file');
+  throw new Error('streamService: Supabase URL or Service Role Key is missing.');
 }
 
 const supabase = createClient(
   process.env.REACT_APP_SUPABASE_URL,
-  process.env.REACT_APP_SUPABASE_ANON_KEY
+  process.env.REACT_APP_SUPABASE_SERVICE_ROLE_KEY 
 );
 
-// Table name in Supabase
 const SETTINGS_TABLE = 'app_settings';
 const STREAM_ID_KEY = 'youtube_stream_id';
 const STREAM_TYPE_KEY = 'stream_type';
