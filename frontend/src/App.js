@@ -15,8 +15,8 @@ function App() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [currentNote, setCurrentNote] = useState({ title: "", content: "", images: [] });
-  const [streamId, setStreamId] = useState("");
-  const [streamType, setStreamType] = useState("youtube"); // Default to YouTube
+  const [streams, setStreams] = useState([]);
+  const [selectedStreamId, setSelectedStreamId] = useState("");
   const [streamLoading, setStreamLoading] = useState(true);
 
   // Fetch auth session
@@ -46,12 +46,12 @@ function App() {
     return () => subscription?.unsubscribe?.();
   }, []);
 
-  // Fetch stream ID and type from backend
+  // Fetch active streams for regular users
   useEffect(() => {
-    console.log("Setting up stream config fetching...");
+    console.log("Setting up streams fetching...");
     let isActive = true; // Flag to prevent state updates after unmount
     
-    const fetchStreamConfig = async () => {
+    const fetchStreams = async () => {
       if (!isActive) return;
       
       setStreamLoading(true);
@@ -61,26 +61,29 @@ function App() {
         if (currentAuthSession?.access_token) {
           headers['Authorization'] = `Bearer ${currentAuthSession.access_token}`;
         } else {
-          console.warn("No active session token for fetching stream config. Endpoint might fail if protected.");
+          console.warn("No active session token for fetching streams. Endpoint might fail if protected.");
         }
 
-        const response = await fetch(`${API_BASE_URL}/api/stream/config`, {
+        const response = await fetch(`${API_BASE_URL}/api/streams`, {
           method: 'GET', 
           headers: headers,
           credentials: 'include'
         });
 
-        if (!response.ok) throw new Error(`Failed to fetch stream config, status: ${response.status}`);
-        const config = await response.json();
-        console.log("Stream config fetched from backend:", config);
+        if (!response.ok) throw new Error(`Failed to fetch streams, status: ${response.status}`);
+        const streamsData = await response.json();
+        console.log("Streams fetched from backend:", streamsData);
 
         if (isActive) {
-          setStreamId(config.id);
-          setStreamType(config.type);
+          setStreams(streamsData);
+          // If no stream is selected and we have streams, select the first one
+          if (!selectedStreamId && streamsData.length > 0) {
+            setSelectedStreamId(streamsData[0].id);
+          }
           setStreamLoading(false);
         }
       } catch (error) {
-        console.error("Error fetching stream config:", error);
+        console.error("Error fetching streams:", error);
         if (isActive) {
           setStreamLoading(false);
         }
@@ -88,16 +91,20 @@ function App() {
     };
 
     // Call fetch immediately
-    fetchStreamConfig();
+    fetchStreams();
 
     // Set up polling for updates every 30 seconds
-    const pollInterval = setInterval(fetchStreamConfig, 30000);
+    const pollInterval = setInterval(fetchStreams, 30000);
 
     return () => {
       isActive = false;
       clearInterval(pollInterval);
     };
-  }, []);
+  }, [selectedStreamId]);
+
+  const handleStreamSelect = (streamId) => {
+    setSelectedStreamId(streamId);
+  };
 
   const handleScreenshot = (blob) => {
     if (blob instanceof Blob) {
@@ -118,8 +125,8 @@ function App() {
   console.log("Rendering App with:", {
     isLoading: loading,
     hasSession: !!session,
-    streamId,
-    streamType,
+    streams,
+    selectedStreamId,
     isStreamLoading: streamLoading
   });
 
@@ -153,8 +160,9 @@ function App() {
                     ) : (
                       <WebcamContainer
                         onScreenshot={handleScreenshot}
-                        streamId={streamId}
-                        streamType={streamType}
+                        streams={streams}
+                        selectedStreamId={selectedStreamId}
+                        onStreamSelect={handleStreamSelect}
                         isLoading={false}
                       />
                     )}
@@ -194,11 +202,7 @@ function App() {
           <Route
             path="/admin"
             element={
-              <AdminPage
-                currentStreamId={streamId}
-                currentStreamType={streamType}
-                isLoading={streamLoading}
-              />
+              <AdminPage />
             }
           />
         </Routes>

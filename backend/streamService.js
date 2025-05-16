@@ -11,194 +11,193 @@ const supabase = createClient(
   process.env.REACT_APP_SUPABASE_SERVICE_ROLE_KEY 
 );
 
-const SETTINGS_TABLE = 'app_settings';
-const STREAM_ID_KEY = 'youtube_stream_id';
-const STREAM_TYPE_KEY = 'stream_type';
+const STREAMS_TABLE = 'streams';
 
 /**
  * Service to handle stream settings in Supabase
  */
 const streamService = {
   /**
-   * Get the current active stream ID
-   * @returns {Promise<string>} The current stream ID or empty string if none exists
+   * Get all active streams
+   * @returns {Promise<Array>} Array of active streams
    */
-  async getStreamId() {
+  async getActiveStreams() {
     try {
       const { data, error } = await supabase
-        .from(SETTINGS_TABLE)
-        .select('value')
-        .eq('key', STREAM_ID_KEY)
+        .from(STREAMS_TABLE)
+        .select('*')
+        .eq('is_active', true)
+        .order('name');
+
+      if (error) {
+        console.error('Error fetching active streams:', error);
+        return [];
+      }
+
+      return data || [];
+    } catch (err) {
+      console.error('Unexpected error fetching active streams:', err);
+      return [];
+    }
+  },
+
+  /**
+   * Get all streams (admin only)
+   * @returns {Promise<Array>} Array of all streams
+   */
+  async getAllStreams() {
+    try {
+      const { data, error } = await supabase
+        .from(STREAMS_TABLE)
+        .select('*')
+        .order('name');
+
+      if (error) {
+        console.error('Error fetching all streams:', error);
+        return [];
+      }
+
+      return data || [];
+    } catch (err) {
+      console.error('Unexpected error fetching all streams:', err);
+      return [];
+    }
+  },
+
+  /**
+   * Get a specific stream by ID
+   * @param {string} streamId The stream ID to fetch
+   * @returns {Promise<Object>} The stream object or null if not found
+   */
+  async getStreamById(streamId) {
+    try {
+      const { data, error } = await supabase
+        .from(STREAMS_TABLE)
+        .select('*')
+        .eq('id', streamId)
         .single();
 
       if (error) {
-        console.error('Error fetching stream ID:', error);
-        return '';
+        console.error('Error fetching stream:', error);
+        return null;
       }
 
-      return data?.value || '';
+      return data;
     } catch (err) {
-      console.error('Unexpected error fetching stream ID:', err);
-      return '';
+      console.error('Unexpected error fetching stream:', err);
+      return null;
     }
   },
 
   /**
-   * Get the current stream type (youtube or zoom)
-   * @returns {Promise<string>} The current stream type or 'youtube' as default
+   * Create a new stream
+   * @param {Object} streamData The stream data
+   * @returns {Promise<Object>} The created stream or null if failed
    */
-  async getStreamType() {
+  async createStream(streamData) {
     try {
       const { data, error } = await supabase
-        .from(SETTINGS_TABLE)
-        .select('value')
-        .eq('key', STREAM_TYPE_KEY)
+        .from(STREAMS_TABLE)
+        .insert({
+          name: streamData.name,
+          stream_id: streamData.streamId,
+          stream_type: streamData.streamType,
+          is_active: streamData.isActive || false
+        })
+        .select()
         .single();
 
       if (error) {
-        return 'youtube';
+        console.error('Error creating stream:', error);
+        return null;
       }
 
-      return data?.value || 'youtube';
+      return data;
     } catch (err) {
-      console.error('Unexpected error fetching stream type:', err);
-      return 'youtube';
+      console.error('Unexpected error creating stream:', err);
+      return null;
     }
   },
 
   /**
-   * Get complete stream configuration (ID and type)
-   * @returns {Promise<Object>} Object containing stream ID and type
-   */
-  async getStreamConfig() {
-    try {
-      const [streamId, streamType] = await Promise.all([
-        this.getStreamId(),
-        this.getStreamType()
-      ]);
-      
-      return { 
-        id: streamId, 
-        type: streamType 
-      };
-    } catch (err) {
-      console.error('Unexpected error fetching stream config:', err);
-      return { id: '', type: 'youtube' };
-    }
-  },
-
-  /**
-   * Update the stream ID
-   * @param {string} streamId The new stream ID
+   * Update an existing stream
+   * @param {string} streamId The ID of the stream to update
+   * @param {Object} streamData The updated stream data
    * @returns {Promise<boolean>} Success status
    */
-  async updateStreamId(streamId) {
+  async updateStream(streamId, streamData) {
     try {
-      // First check if the record exists
-      const { data: existingData } = await supabase
-        .from(SETTINGS_TABLE)
-        .select('id')
-        .eq('key', STREAM_ID_KEY)
-        .single();
+      const { error } = await supabase
+        .from(STREAMS_TABLE)
+        .update({
+          name: streamData.name,
+          stream_id: streamData.streamId,
+          stream_type: streamData.streamType,
+          is_active: streamData.isActive,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', streamId);
 
-      let result;
-      
-      if (existingData) {
-        // Update existing record
-        result = await supabase
-          .from(SETTINGS_TABLE)
-          .update({ value: streamId, updated_at: new Date().toISOString() })
-          .eq('key', STREAM_ID_KEY);
-      } else {
-        // Insert new record
-        result = await supabase
-          .from(SETTINGS_TABLE)
-          .insert({ 
-            key: STREAM_ID_KEY, 
-            value: streamId,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          });
-      }
-
-      const { error } = result;
-      
       if (error) {
-        console.error('Error updating stream ID:', error);
+        console.error('Error updating stream:', error);
         return false;
       }
 
       return true;
     } catch (err) {
-      console.error('Unexpected error updating stream ID:', err);
+      console.error('Unexpected error updating stream:', err);
       return false;
     }
   },
 
   /**
-   * Update the stream type (youtube or zoom)
-   * @param {string} streamType The new stream type
+   * Delete a stream
+   * @param {string} streamId The ID of the stream to delete
    * @returns {Promise<boolean>} Success status
    */
-  async updateStreamType(streamType) {
+  async deleteStream(streamId) {
     try {
-      // First check if the record exists
-      const { data: existingData } = await supabase
-        .from(SETTINGS_TABLE)
-        .select('id')
-        .eq('key', STREAM_TYPE_KEY)
-        .single();
+      const { error } = await supabase
+        .from(STREAMS_TABLE)
+        .delete()
+        .eq('id', streamId);
 
-      let result;
-      
-      if (existingData) {
-        // Update existing record
-        result = await supabase
-          .from(SETTINGS_TABLE)
-          .update({ value: streamType, updated_at: new Date().toISOString() })
-          .eq('key', STREAM_TYPE_KEY);
-      } else {
-        // Insert new record
-        result = await supabase
-          .from(SETTINGS_TABLE)
-          .insert({ 
-            key: STREAM_TYPE_KEY, 
-            value: streamType,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          });
-      }
-
-      const { error } = result;
-      
       if (error) {
-        console.error('Error updating stream type:', error);
+        console.error('Error deleting stream:', error);
         return false;
       }
 
       return true;
     } catch (err) {
-      console.error('Unexpected error updating stream type:', err);
+      console.error('Unexpected error deleting stream:', err);
       return false;
     }
   },
 
   /**
-   * Update both stream ID and type in one operation
-   * @param {string} streamId The new stream ID
-   * @param {string} streamType The new stream type
+   * Toggle stream active status
+   * @param {string} streamId The ID of the stream to toggle
+   * @param {boolean} isActive The new active status
    * @returns {Promise<boolean>} Success status
    */
-  async updateStreamConfig(streamId, streamType) {
+  async toggleStreamActive(streamId, isActive) {
     try {
-      const [idSuccess, typeSuccess] = await Promise.all([
-        this.updateStreamId(streamId),
-        this.updateStreamType(streamType)
-      ]);
-      
-      return idSuccess && typeSuccess;
+      const { error } = await supabase
+        .from(STREAMS_TABLE)
+        .update({
+          is_active: isActive,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', streamId);
+
+      if (error) {
+        console.error('Error toggling stream active status:', error);
+        return false;
+      }
+
+      return true;
     } catch (err) {
-      console.error('Unexpected error updating stream config:', err);
+      console.error('Unexpected error toggling stream active status:', err);
       return false;
     }
   }

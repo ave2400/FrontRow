@@ -11,7 +11,6 @@ const StreamingOnlyWebcamFeed = ({
   videoRef,
   iframeRef
 }) => {
-  console.log("StreamingOnlyWebcamFeed streamId:", streamId, "type:", streamType);
   const {
     contrast = 100,
     brightness = 100,

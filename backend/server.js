@@ -94,81 +94,89 @@ async function main() {
       }
     });
 
-    // Stream API Routes (These seem independent of assistantService, so they are fine)
-    app.get('/api/stream/config', authMiddleware, async (req, res) => {
+    // Stream API Routes
+    app.get('/api/streams', authMiddleware, async (req, res) => {
       try {
-        const config = await streamService.getStreamConfig();
-        res.json(config);
+        const streams = await streamService.getActiveStreams();
+        res.json(streams);
       } catch (error) {
-        console.error('Error fetching stream config:', error);
+        console.error('Error fetching streams:', error);
         res.status(500).json({ error: 'Internal server error' });
       }
     });
 
-    app.post('/api/stream/config', authMiddleware, async (req, res) => {
+    app.get('/api/streams/all', authMiddleware, async (req, res) => {
       try {
-        const { streamId, streamType } = req.body;
-        const success = await streamService.updateStreamConfig(streamId, streamType);
-        
-        if (success) {
-          res.json({ message: 'Stream configuration updated successfully' });
-        } else {
-          res.status(500).json({ error: 'Failed to update stream configuration' });
+        const streams = await streamService.getAllStreams();
+        res.json(streams);
+      } catch (error) {
+        console.error('Error fetching all streams:', error);
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    });
+
+    app.get('/api/streams/:id', authMiddleware, async (req, res) => {
+      try {
+        const stream = await streamService.getStreamById(req.params.id);
+        if (!stream) {
+          return res.status(404).json({ error: 'Stream not found' });
         }
+        res.json(stream);
       } catch (error) {
-        console.error('Error updating stream config:', error);
+        console.error('Error fetching stream:', error);
         res.status(500).json({ error: 'Internal server error' });
       }
     });
 
-    app.get('/api/stream/id', authMiddleware, async (req, res) => {
+    app.post('/api/streams', authMiddleware, async (req, res) => {
       try {
-        const streamId = await streamService.getStreamId();
-        res.json({ streamId });
-      } catch (error) {
-        console.error('Error fetching stream ID:', error);
-        res.status(500).json({ error: 'Internal server error' });
-      }
-    });
-
-    app.post('/api/stream/id', authMiddleware, async (req, res) => {
-      try {
-        const { streamId } = req.body;
-        const success = await streamService.updateStreamId(streamId);
-        
-        if (success) {
-          res.json({ message: 'Stream ID updated successfully' });
-        } else {
-          res.status(500).json({ error: 'Failed to update stream ID' });
+        const stream = await streamService.createStream(req.body);
+        if (!stream) {
+          return res.status(500).json({ error: 'Failed to create stream' });
         }
+        res.json(stream);
       } catch (error) {
-        console.error('Error updating stream ID:', error);
+        console.error('Error creating stream:', error);
         res.status(500).json({ error: 'Internal server error' });
       }
     });
 
-    app.get('/api/stream/type', authMiddleware, async (req, res) => {
+    app.put('/api/streams/:id', authMiddleware, async (req, res) => {
       try {
-        const streamType = await streamService.getStreamType();
-        res.json({ streamType });
-      } catch (error) {
-        console.error('Error fetching stream type:', error);
-        res.status(500).json({ error: 'Internal server error' });
-      }
-    });
-
-    app.post('/api/stream/type', authMiddleware, async (req, res) => {
-      try {
-        const { streamType } = req.body;
-        const success = await streamService.updateStreamType(streamType);
-        
-        if (success) {
-          res.json({ message: 'Stream type updated successfully' });
-        } else {
-          res.status(500).json({ error: 'Failed to update stream type' });
+        const success = await streamService.updateStream(req.params.id, req.body);
+        if (!success) {
+          return res.status(500).json({ error: 'Failed to update stream' });
         }
+        res.json({ message: 'Stream updated successfully' });
       } catch (error) {
-        console.error('Error updating stream type:', error);
+        console.error('Error updating stream:', error);
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    });
+
+    app.delete('/api/streams/:id', authMiddleware, async (req, res) => {
+      try {
+        const success = await streamService.deleteStream(req.params.id);
+        if (!success) {
+          return res.status(500).json({ error: 'Failed to delete stream' });
+        }
+        res.json({ message: 'Stream deleted successfully' });
+      } catch (error) {
+        console.error('Error deleting stream:', error);
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    });
+
+    app.post('/api/streams/:id/toggle', authMiddleware, async (req, res) => {
+      try {
+        const { isActive } = req.body;
+        const success = await streamService.toggleStreamActive(req.params.id, isActive);
+        if (!success) {
+          return res.status(500).json({ error: 'Failed to toggle stream status' });
+        }
+        res.json({ message: 'Stream status updated successfully' });
+      } catch (error) {
+        console.error('Error toggling stream status:', error);
         res.status(500).json({ error: 'Internal server error' });
       }
     });
