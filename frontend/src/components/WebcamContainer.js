@@ -60,8 +60,31 @@ const WebcamContainer = ({ onScreenshot, streamId, streamType = "youtube", isLoa
     });
   };
 
+  const handleWheel = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Only allow scrolling when zoomed in
+    if (zoom <= 1) return;
+
+    // Calculate the movement based on wheel delta
+    // Multiply by a factor to make scrolling more responsive
+    const scrollFactor = 0.5;
+    const deltaX = e.deltaX * scrollFactor;
+    const deltaY = e.deltaY * scrollFactor;
+
+    // Update position with smooth scrolling
+    setPosition(prevPosition => {
+      const newPosition = clampPosition(
+        prevPosition.x - deltaX,
+        prevPosition.y - deltaY
+      );
+      return newPosition;
+    });
+  };
+
   const handleDragStart = (e) => {
-    if (zoom === 1) return;
+    if (zoom <= 1) return;
 
     e.preventDefault();
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
@@ -73,8 +96,9 @@ const WebcamContainer = ({ onScreenshot, streamId, streamType = "youtube", isLoa
   };
 
   const handleDrag = (e) => {
-    if (!isDragging || zoom === 1) return;
+    if (!isDragging || zoom <= 1) return;
 
+    e.preventDefault();
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
 
@@ -92,23 +116,6 @@ const WebcamContainer = ({ onScreenshot, streamId, streamType = "youtube", isLoa
   const handleDragEnd = () => {
     setIsDragging(false);
     positionRef.current = position;
-  };
-
-  const handleWheel = (e) => {
-    if (zoom === 1) return;
-
-    e.preventDefault();
-
-    const deltaX = e.deltaMode === 1 ? e.deltaX * 20 : e.deltaX;
-    const deltaY = e.deltaMode === 1 ? e.deltaY * 20 : e.deltaY;
-
-    setPosition(prevPosition => {
-      const newPosition = clampPosition(
-        prevPosition.x - deltaX,
-        prevPosition.y - deltaY
-      );
-      return newPosition;
-    });
   };
 
   const handleFilterChange = (newFilters) => {
@@ -206,12 +213,18 @@ const WebcamContainer = ({ onScreenshot, streamId, streamType = "youtube", isLoa
       onTouchMove={handleDrag}
       onTouchEnd={handleDragEnd}
       onWheel={handleWheel}
+      style={{ cursor: zoom > 1 ? 'grab' : 'default' }}
     >
       <div
         className="webcam-box"
         onMouseDown={handleDragStart}
         onTouchStart={handleDragStart}
-        style={{ cursor: zoom > 1 ? (isDragging ? 'grabbing' : 'grab') : 'default' }}
+        style={{ 
+          cursor: zoom > 1 ? (isDragging ? 'grabbing' : 'grab') : 'default',
+          transform: `scale(${zoom}) translate(${position.x}px, ${position.y}px)`,
+          transformOrigin: 'center',
+          transition: isDragging ? 'none' : 'transform 0.1s ease-out'
+        }}
       >
         <StreamingOnlyWebcamFeed
           zoom={zoom}
@@ -220,6 +233,7 @@ const WebcamContainer = ({ onScreenshot, streamId, streamType = "youtube", isLoa
           streamId={streamId}
           streamType={streamType}
           isLoading={isLoading}
+          onWheel={handleWheel}
         />
 
         {showFlash && <div className="screenshot-flash" />}
@@ -228,19 +242,19 @@ const WebcamContainer = ({ onScreenshot, streamId, streamType = "youtube", isLoa
             Screenshot added to note!
           </div>
         )}
+      </div>
 
-        <div className="controls-container">
-          <ZoomControls zoomIn={zoomIn} zoomOut={zoomOut} />
-          <ContrastControls onFilterChange={handleFilterChange} />
-          <button
-            onClick={takeScreenshot}
-            className="btn btn-icon"
-            title="Take Screenshot"
-            disabled={isCapturing}
-          >
-            {isCapturing ? '⏳' : '📸'}
-          </button>
-        </div>
+      <div className="controls-container">
+        <ZoomControls zoomIn={zoomIn} zoomOut={zoomOut} />
+        <ContrastControls onFilterChange={handleFilterChange} />
+        <button
+          onClick={takeScreenshot}
+          className="btn btn-icon"
+          title="Take Screenshot"
+          disabled={isCapturing}
+        >
+          {isCapturing ? '⏳' : '📸'}
+        </button>
       </div>
     </div>
   );
