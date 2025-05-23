@@ -4,7 +4,6 @@ import logo from './FrontRow_Eyeball_Logo.svg';
 import { marked } from 'marked';
 
 const AI_ASSISTANT_API_URL = `${process.env.REACT_APP_BACKEND}/api/ai/assistant`;
-// console.log(`HELLO LOOK AT ME, this is BACKEND: ${process.env.REACT_APP_BACKEND}`);
 
 const AIAssistant = ({ currentNote }) => {
   const [showButtons, setShowButtons] = useState(false);
@@ -73,11 +72,6 @@ const AIAssistant = ({ currentNote }) => {
       }
     };
   }, [currentNote?.content]);
-
-  // Debug log to check if component is receiving currentNote
-  // useEffect(() => {
-  //   console.log('AIAssistant received currentNote:', currentNote);
-  // }, [currentNote]);
 
   // Function to get the last sentence or phrase from the content
   const getLastPhrase = (content) => {
@@ -230,10 +224,6 @@ const AIAssistant = ({ currentNote }) => {
             'image/jpeg',
             0.8 // quality
           );
-
-          // Convert to JPEG with 0.6 quality
-          // const compressedImage = canvas.toDataURL('image/jpeg', 0.6);
-          // setSelectedImage(compressedImage);
         };
         img.src = reader.result;
       };
@@ -260,19 +250,9 @@ const AIAssistant = ({ currentNote }) => {
     formData.append('action', 'getImageSummary');
     formData.append('image', selectedImage, 'uploaded_image.jpg');
 
-    // console.log('Base64 image string length:', selectedImage.length);
-
-    // const approxSizeMB = (selectedImage.length / (1024 * 1024)).toFixed(2);
-    // console.log(`Approximate Base64 string size: ${approxSizeMB} MB`);
-
     try {
       const apiResponse = await fetch(AI_ASSISTANT_API_URL, {
         method: 'POST',
-        // headers: { 'Content-Type': 'application/json' },
-        // body: JSON.stringify({
-        //   action: 'getImageSummary',
-        //   imageUrl: selectedImage
-        // }),
         body: formData,
       });
 

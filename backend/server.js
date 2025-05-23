@@ -50,11 +50,6 @@ async function main() {
 
     // AI Assistant Routes
     app.post('/api/ai/assistant', upload.single('image'), async (req, res) => {
-      // DETAILED LOGGING HERE:
-      console.log('--- Request to /api/ai/assistant ---');
-      console.log('req.body:', JSON.stringify(req.body, null, 2)); // Log text fields from FormData
-      console.log('req.file:', req.file ? { fieldname: req.file.fieldname, originalname: req.file.originalname, mimetype: req.file.mimetype, size: req.file.size } : 'No file uploaded'); // Log file info (not the whole buffer)
-
       if (!assistantServiceInstance) {
         console.error("AI Assistant service not ready.");
         return res.status(503).json({ error: "Service not available, please try again shortly." });
@@ -83,16 +78,13 @@ async function main() {
           case 'getImageSummary':
             console.log('Case: getImageSummary');
             if (imageFile) {
-              console.log('Image file received for summary.');
               const imageBase64 = `data:${imageFile.mimetype};base64,${imageFile.buffer.toString('base64')}`;
               const summary = await assistantServiceInstance.getImageSummary(imageBase64);
               return res.json(summary);
-            } else if (imageUrl) { // Fallback if you still want to support imageUrl for this action
-              console.log('Image URL received for summary.');
+            } else if (imageUrl) {
               const summaryFromUrl = await assistantServiceInstance.getImageSummary(imageUrl);
               return res.json(summaryFromUrl);
             } else {
-              console.log('getImageSummary: No imageFile or imageUrl provided.');
               return res.status(400).json({ error: 'Image file or Image URL is required for getImageSummary' });
             }
 
@@ -104,16 +96,9 @@ async function main() {
             return res.status(400).json({ error: 'Invalid concept name for marking as shown.' });
 
           default:
-            // if (!action && imageFile) {
-            //   const imageBase64 = `data:${imageFile.mimetype};base64,${imageFile.buffer.toString('base64')}`;
-            //   const summaryOnly = await assistantServiceInstance.getImageSummary(imageBase64);
-            //   return res.json(summaryOnly);
-            // }
-            console.log(`Default case hit. Action received: "${action}". imageFile present: ${!!imageFile}`);
             return res.status(400).json({ error: 'Invalid action or missing action' });
         }
       } catch (error) {
-        console.error('Error in AI assistant API (/api/ai/assistant):', error);
         if (error instanceof multer.MulterError) {
           if (error.code === 'LIMIT_FILE_SIZE') {
             return res.status(413).json({ error: 'Image file is too large.' });
