@@ -219,7 +219,6 @@ const WebcamContainer = ({ onScreenshot, streamId, streamType = "youtube", isLoa
         className="webcam-box"
         onMouseDown={handleDragStart}
         onTouchStart={handleDragStart}
-        onWheel={handleWheel}
         style={{ 
           cursor: zoom > 1 ? (isDragging ? 'grabbing' : 'grab') : 'default',
           transform: `scale(${zoom}) translate(${position.x}px, ${position.y}px)`,
