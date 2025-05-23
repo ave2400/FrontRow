@@ -23,7 +23,7 @@ const AIAssistant = ({ currentNote }) => {
     if (typeof noteContent !== 'string') {
       return;
     }
-    
+
     // Clear previous timeout
     if (debounceTimeoutRef.current) {
       clearTimeout(debounceTimeoutRef.current);
@@ -97,8 +97,8 @@ const AIAssistant = ({ currentNote }) => {
       const apiResponse = await fetch(AI_ASSISTANT_API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          action: 'getExplanation', 
+        body: JSON.stringify({
+          action: 'getExplanation',
           concept: detectedConcept
         }),
       });
@@ -122,8 +122,8 @@ const AIAssistant = ({ currentNote }) => {
       const apiResponse = await fetch(AI_ASSISTANT_API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          action: 'getPracticeQuestion', 
+        body: JSON.stringify({
+          action: 'getPracticeQuestion',
           concept: detectedConcept
         }),
       });
@@ -147,8 +147,8 @@ const AIAssistant = ({ currentNote }) => {
       const apiResponse = await fetch(AI_ASSISTANT_API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          action: 'getExplanation', 
+        body: JSON.stringify({
+          action: 'getExplanation',
           concept: { name: customTopic, category: 'custom' }
         }),
       });
@@ -174,7 +174,37 @@ const AIAssistant = ({ currentNote }) => {
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setSelectedImage(reader.result);
+        // Compress the image before setting it
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 800;
+          const MAX_HEIGHT = 800;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Convert to JPEG with 0.6 quality
+          const compressedImage = canvas.toDataURL('image/jpeg', 0.6);
+          setSelectedImage(compressedImage);
+        };
+        img.src = reader.result;
       };
       reader.readAsDataURL(file);
     }
@@ -185,21 +215,38 @@ const AIAssistant = ({ currentNote }) => {
 
     setIsLoading(true);
     setResponse(null);
+
+    console.log('Base64 image string length:', selectedImage.length);
+
+    const approxSizeMB = (selectedImage.length / (1024 * 1024)).toFixed(2);
+    console.log(`Approximate Base64 string size: ${approxSizeMB} MB`);
+
     try {
       const apiResponse = await fetch(AI_ASSISTANT_API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           action: 'getImageSummary',
           imageUrl: selectedImage
         }),
       });
-      if (!apiResponse.ok) throw new Error('Failed to get image summary');
+
+      if (!apiResponse.ok) {
+        let errorData;
+        try {
+          errorData = await apiResponse.json();
+        } catch (e) {
+          // If response isn't JSON, use status text
+          errorData = { error: apiResponse.statusText };
+        }
+        console.error('API Error Response:', errorData);
+        throw new Error(errorData.error || 'Failed to get image summary');
+      }
       const data = await apiResponse.json();
       setResponse(data.response);
     } catch (error) {
       console.error('Error getting image summary:', error);
-      setResponse("Sorry, I couldn't analyze the image right now.");
+      setResponse("Sorry, I couldn't analyze the image at this time. Please try again with a smaller image.");
     } finally {
       setIsLoading(false);
     }
@@ -215,7 +262,7 @@ const AIAssistant = ({ currentNote }) => {
           </div>
         </div>
       )}
-      
+
       <div className="ai-assistant-logo" onClick={handleLogoClick}>
         <img src={logo} alt="FrontRow Assistant" />
       </div>

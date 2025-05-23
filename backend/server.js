@@ -25,8 +25,9 @@ app.use(cors({
   credentials: true
 }));
 
-app.use(express.json());
-// app.use(bodyParser.json()); // TODO: idk if we need this (depends on if we use bodyParser.json explicitly in our routes)
+// Increase JSON payload size limit to handle large image data
+app.use(express.json({ limit: '100mb' }));
+app.use(express.urlencoded({ limit: '100mb', extended: true }));
 
 let assistantServiceInstance;
 

@@ -167,26 +167,36 @@ const assistantService = {
   async getImageSummary(imageUrl) {
     try {
       const response = await openai.chat.completions.create({
-        model: "gpt-4-vision-preview",
+        model: "gpt-4.1",
         messages: [
           {
             role: "user",
             content: [
-              { type: "text", text: "Please provide a detailed summary of this image, focusing on any educational content, diagrams, or important concepts shown." },
+              { 
+                type: "text", 
+                text: "Please provide a detailed summary of this image. Focus on describing what you see, any text or diagrams present, and the main subject matter. Be specific and thorough in your description." 
+              },
               {
                 type: "image_url",
-                image_url: imageUrl
+                image_url: {
+                  url: imageUrl,
+                  detail: "high"
+                }
               }
             ]
           }
         ],
-        max_tokens: 500
+        max_tokens: 1000
       });
+
+      if (!response.choices || !response.choices[0] || !response.choices[0].message) {
+        throw new Error("Invalid response format from OpenAI");
+      }
 
       return { response: response.choices[0].message.content };
     } catch (error) {
       console.error("Error getting image summary:", error);
-      return { response: "Sorry, I couldn't analyze the image at this time." };
+      return { response: "Sorry, I couldn't analyze the image at this time. Please make sure the image is clear and try again." };
     }
   },
 
