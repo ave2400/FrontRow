@@ -12,6 +12,7 @@ const AIAssistant = ({ currentNote }) => {
   const [lastCheckedContent, setLastCheckedContent] = useState("");
   const [customTopic, setCustomTopic] = useState("");
   const [selectedImage, setSelectedImage] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
   const [detectedConcept, setDetectedConcept] = useState(null);
 
   const debounceTimeoutRef = useRef(null);
@@ -200,9 +201,31 @@ const AIAssistant = ({ currentNote }) => {
           const ctx = canvas.getContext('2d');
           ctx.drawImage(img, 0, 0, width, height);
 
+          // Get compressed image as a Blob
+          canvas.toBlob(
+            (blob) => {
+              if (blob) {
+                setSelectedImage(blob); // Store the Blob object
+                if (previewUrl) {
+                  URL.revokeObjectURL(previewUrl);
+                }
+                setPreviewUrl(URL.createObjectURL(blob));
+              } else {
+                setSelectedImage(null);
+                if (previewUrl) {
+                  URL.revokeObjectURL(previewUrl);
+                }
+                setPreviewUrl(null);
+                console.error("Failed to create blob from canvas.");
+              }
+            },
+            'image/jpeg',
+            0.8 // quality
+          );
+
           // Convert to JPEG with 0.6 quality
-          const compressedImage = canvas.toDataURL('image/jpeg', 0.6);
-          setSelectedImage(compressedImage);
+          // const compressedImage = canvas.toDataURL('image/jpeg', 0.6);
+          // setSelectedImage(compressedImage);
         };
         img.src = reader.result;
       };
@@ -210,25 +233,39 @@ const AIAssistant = ({ currentNote }) => {
     }
   };
 
+  // Effect to cleanup Object URL when component unmounts or previewUrl changes
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
+
   const handleImageSummary = async () => {
-    if (!selectedImage) return;
+    if (!selectedImage) return; // seelectedImage is now a Blob
 
     setIsLoading(true);
     setResponse(null);
 
-    console.log('Base64 image string length:', selectedImage.length);
+    const formData = new FormData();
+    formData.append('action', 'getImageSummary');
+    formData.append('image', selectedImage, 'uploaded_image.jpg');
 
-    const approxSizeMB = (selectedImage.length / (1024 * 1024)).toFixed(2);
-    console.log(`Approximate Base64 string size: ${approxSizeMB} MB`);
+    // console.log('Base64 image string length:', selectedImage.length);
+
+    // const approxSizeMB = (selectedImage.length / (1024 * 1024)).toFixed(2);
+    // console.log(`Approximate Base64 string size: ${approxSizeMB} MB`);
 
     try {
       const apiResponse = await fetch(AI_ASSISTANT_API_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'getImageSummary',
-          imageUrl: selectedImage
-        }),
+        // headers: { 'Content-Type': 'application/json' },
+        // body: JSON.stringify({
+        //   action: 'getImageSummary',
+        //   imageUrl: selectedImage
+        // }),
+        body: formData,
       });
 
       if (!apiResponse.ok) {
@@ -237,7 +274,7 @@ const AIAssistant = ({ currentNote }) => {
           errorData = await apiResponse.json();
         } catch (e) {
           // If response isn't JSON, use status text
-          errorData = { error: apiResponse.statusText };
+          errorData = { error: apiResponse.statusText || `HTTP error ${apiResponse.status}` };
         }
         console.error('API Error Response:', errorData);
         throw new Error(errorData.error || 'Failed to get image summary');
@@ -305,9 +342,9 @@ const AIAssistant = ({ currentNote }) => {
             <label htmlFor="image-upload" className="image-upload-label">
               Upload Image
             </label>
-            {selectedImage && (
+            {previewUrl && selectedImage && (
               <>
-                <img src={selectedImage} alt="Selected" className="preview-image" />
+                <img src={previewUrl} alt="Selected" className="preview-image" />
                 <button onClick={handleImageSummary} disabled={isLoading}>
                   Get Image Summary
                 </button>
