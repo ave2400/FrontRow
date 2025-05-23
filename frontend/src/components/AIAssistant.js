@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './AIAssistant.css';
 import logo from './FrontRow_Eyeball_Logo.svg';
+import { marked } from 'marked';
 
 const AI_ASSISTANT_API_URL = `${process.env.REACT_APP_BACKEND}/api/ai/assistant`;
 // console.log(`HELLO LOOK AT ME, this is BACKEND: ${process.env.REACT_APP_BACKEND}`);
@@ -168,6 +169,13 @@ const AIAssistant = ({ currentNote }) => {
     setShowButtons(false);
     setResponse(null);
     setCustomTopic("");
+
+    // Clear image on close
+    setSelectedImage(null);
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+    setPreviewUrl(null);
   };
 
   const handleImageUpload = (event) => {
@@ -294,7 +302,7 @@ const AIAssistant = ({ currentNote }) => {
       {response && (
         <div className="ai-response-overlay">
           <div className="ai-response-content">
-            <div className="ai-response" dangerouslySetInnerHTML={{ __html: response.replace(/\n/g, '<br />') }} />
+            <div className="ai-response" dangerouslySetInnerHTML={{ __html: marked(response) }} />
             <button className="close-response" onClick={handleClose}>Close</button>
           </div>
         </div>
