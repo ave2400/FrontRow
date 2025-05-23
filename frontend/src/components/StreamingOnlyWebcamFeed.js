@@ -45,7 +45,6 @@ const StreamingOnlyWebcamFeed = ({
       className="webcam-feed"
       onWheel={onWheel}
       style={{
-        transform: `scale(${zoom}) translate(${position?.x / zoom || 0}px, ${position?.y / zoom || 0}px)`,
         transformOrigin: 'center',
         width: '100%',
         height: '100%'
