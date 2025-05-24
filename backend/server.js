@@ -16,6 +16,14 @@ const storage = multer.memoryStorage(); // Stores file in memory as a Buffer
 const upload = multer({
   storage: storage,
   limits: { fileSize: 100 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif'];
+    if (allowedMimeTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only JPEG, PNG, and GIF are allowed.'));
+    }
+  },
 });
 
 // Middleware
