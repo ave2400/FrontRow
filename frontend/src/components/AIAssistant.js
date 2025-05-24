@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './AIAssistant.css';
 import logo from './FrontRow_Eyeball_Logo.svg';
+import { marked } from 'marked';
 
 const AI_ASSISTANT_API_URL = `${process.env.REACT_APP_BACKEND}/api/ai/assistant`;
-// console.log(`HELLO LOOK AT ME, this is BACKEND: ${process.env.REACT_APP_BACKEND}`);
 
 const AIAssistant = ({ currentNote }) => {
   const [showButtons, setShowButtons] = useState(false);
@@ -12,6 +12,7 @@ const AIAssistant = ({ currentNote }) => {
   const [lastCheckedContent, setLastCheckedContent] = useState("");
   const [customTopic, setCustomTopic] = useState("");
   const [selectedImage, setSelectedImage] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
   const [detectedConcept, setDetectedConcept] = useState(null);
 
   const debounceTimeoutRef = useRef(null);
@@ -23,7 +24,7 @@ const AIAssistant = ({ currentNote }) => {
     if (typeof noteContent !== 'string') {
       return;
     }
-    
+
     // Clear previous timeout
     if (debounceTimeoutRef.current) {
       clearTimeout(debounceTimeoutRef.current);
@@ -72,11 +73,6 @@ const AIAssistant = ({ currentNote }) => {
     };
   }, [currentNote?.content]);
 
-  // Debug log to check if component is receiving currentNote
-  // useEffect(() => {
-  //   console.log('AIAssistant received currentNote:', currentNote);
-  // }, [currentNote]);
-
   // Function to get the last sentence or phrase from the content
   const getLastPhrase = (content) => {
     if (!content) return "";
@@ -97,8 +93,8 @@ const AIAssistant = ({ currentNote }) => {
       const apiResponse = await fetch(AI_ASSISTANT_API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          action: 'getExplanation', 
+        body: JSON.stringify({
+          action: 'getExplanation',
           concept: detectedConcept
         }),
       });
@@ -122,8 +118,8 @@ const AIAssistant = ({ currentNote }) => {
       const apiResponse = await fetch(AI_ASSISTANT_API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          action: 'getPracticeQuestion', 
+        body: JSON.stringify({
+          action: 'getPracticeQuestion',
           concept: detectedConcept
         }),
       });
@@ -147,8 +143,8 @@ const AIAssistant = ({ currentNote }) => {
       const apiResponse = await fetch(AI_ASSISTANT_API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          action: 'getExplanation', 
+        body: JSON.stringify({
+          action: 'getExplanation',
           concept: { name: customTopic, category: 'custom' }
         }),
       });
@@ -167,6 +163,13 @@ const AIAssistant = ({ currentNote }) => {
     setShowButtons(false);
     setResponse(null);
     setCustomTopic("");
+
+    // Clear image on close
+    setSelectedImage(null);
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+    setPreviewUrl(null);
   };
 
   const handleImageUpload = (event) => {
@@ -174,32 +177,101 @@ const AIAssistant = ({ currentNote }) => {
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setSelectedImage(reader.result);
+        // Compress the image before setting it
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 800;
+          const MAX_HEIGHT = 800;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Get compressed image as a Blob
+          canvas.toBlob(
+            (blob) => {
+              if (blob) {
+                setSelectedImage(blob); // Store the Blob object
+                if (previewUrl) {
+                  URL.revokeObjectURL(previewUrl);
+                }
+                setPreviewUrl(URL.createObjectURL(blob));
+              } else {
+                setSelectedImage(null);
+                if (previewUrl) {
+                  URL.revokeObjectURL(previewUrl);
+                }
+                setPreviewUrl(null);
+                console.error("Failed to create blob from canvas.");
+              }
+            },
+            'image/jpeg',
+            0.8 // quality
+          );
+        };
+        img.src = reader.result;
       };
       reader.readAsDataURL(file);
     }
   };
 
+  // Effect to cleanup Object URL when component unmounts or previewUrl changes
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
+
   const handleImageSummary = async () => {
-    if (!selectedImage) return;
+    if (!selectedImage) return; // seelectedImage is now a Blob
 
     setIsLoading(true);
     setResponse(null);
+
+    const formData = new FormData();
+    formData.append('action', 'getImageSummary');
+    formData.append('image', selectedImage, 'uploaded_image.jpg');
+
     try {
       const apiResponse = await fetch(AI_ASSISTANT_API_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          action: 'getImageSummary',
-          imageUrl: selectedImage
-        }),
+        body: formData,
       });
-      if (!apiResponse.ok) throw new Error('Failed to get image summary');
+
+      if (!apiResponse.ok) {
+        let errorData;
+        try {
+          errorData = await apiResponse.json();
+        } catch (e) {
+          // If response isn't JSON, use status text
+          errorData = { error: apiResponse.statusText || `HTTP error ${apiResponse.status}` };
+        }
+        console.error('API Error Response:', errorData);
+        throw new Error(errorData.error || 'Failed to get image summary');
+      }
       const data = await apiResponse.json();
       setResponse(data.response);
     } catch (error) {
       console.error('Error getting image summary:', error);
-      setResponse("Sorry, I couldn't analyze the image right now.");
+      setResponse("Sorry, I couldn't analyze the image at this time. Please try again with a smaller image.");
     } finally {
       setIsLoading(false);
     }
@@ -210,12 +282,12 @@ const AIAssistant = ({ currentNote }) => {
       {response && (
         <div className="ai-response-overlay">
           <div className="ai-response-content">
-            <div className="ai-response" dangerouslySetInnerHTML={{ __html: response.replace(/\n/g, '<br />') }} />
+            <div className="ai-response" dangerouslySetInnerHTML={{ __html: marked(response) }} />
             <button className="close-response" onClick={handleClose}>Close</button>
           </div>
         </div>
       )}
-      
+
       <div className="ai-assistant-logo" onClick={handleLogoClick}>
         <img src={logo} alt="FrontRow Assistant" />
       </div>
@@ -258,9 +330,9 @@ const AIAssistant = ({ currentNote }) => {
             <label htmlFor="image-upload" className="image-upload-label">
               Upload Image
             </label>
-            {selectedImage && (
+            {previewUrl && selectedImage && (
               <>
-                <img src={selectedImage} alt="Selected" className="preview-image" />
+                <img src={previewUrl} alt="Selected" className="preview-image" />
                 <button onClick={handleImageSummary} disabled={isLoading}>
                   Get Image Summary
                 </button>

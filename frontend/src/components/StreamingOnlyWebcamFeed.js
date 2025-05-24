@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef } from "react";
 import "./WebcamFeed.css";
 
 const StreamingOnlyWebcamFeed = ({ 
@@ -9,8 +9,12 @@ const StreamingOnlyWebcamFeed = ({
   streamType = "youtube", 
   isLoading,
   videoRef,
-  iframeRef
+  iframeRef,
+  onWheel
 }) => {
+  console.log("StreamingOnlyWebcamFeed streamId:", streamId, "type:", streamType);
+  const iframeRefInternal = useRef(null);
+  const finalIframeRef = iframeRef || iframeRefInternal;
   const {
     contrast = 100,
     brightness = 100,
@@ -39,8 +43,8 @@ const StreamingOnlyWebcamFeed = ({
   return (
     <div 
       className="webcam-feed"
+      onWheel={onWheel}
       style={{
-        transform: `scale(${zoom}) translate(${position?.x / zoom || 0}px, ${position?.y / zoom || 0}px)`,
         transformOrigin: 'center',
         width: '100%',
         height: '100%'
@@ -48,29 +52,33 @@ const StreamingOnlyWebcamFeed = ({
     >
       {streamId ? (
         streamType === "youtube" ? (
-          // YouTube stream embed
-          <iframe
-            ref={iframeRef}
-            width="100%"
-            height="100%"
-            src={`https://www.youtube.com/embed/${streamId}?autoplay=1&mute=0`}
-            frameBorder="0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-            style={{ filter: filterStyle }}
-          ></iframe>
+          <div className="stream-wrapper">
+            <iframe
+              ref={finalIframeRef}
+              width="100%"
+              height="100%"
+              src={`https://www.youtube.com/embed/${streamId}?autoplay=1&mute=0&enablejsapi=1&origin=${window.location.origin}&rel=0&modestbranding=1&playsinline=1`}
+              frameBorder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              style={{ filter: filterStyle }}
+            />
+            {zoom > 1 && <div className="stream-overlay" onWheel={onWheel} />}
+          </div>
         ) : streamType === "zoom" ? (
-          // Zoom meeting embed
-          <iframe
-            ref={iframeRef}
-            width="100%"
-            height="100%"
-            src={streamId}
-            frameBorder="0"
-            allow="microphone; camera; autoplay; fullscreen; display-capture"
-            allowFullScreen
-            style={{ filter: filterStyle }}
-          ></iframe>
+          <div className="stream-wrapper">
+            <iframe
+              ref={finalIframeRef}
+              width="100%"
+              height="100%"
+              src={streamId}
+              frameBorder="0"
+              allow="microphone; camera; autoplay; fullscreen; display-capture"
+              allowFullScreen
+              style={{ filter: filterStyle }}
+            />
+            {zoom > 1 && <div className="stream-overlay" onWheel={onWheel} />}
+          </div>
         ) : (
           <div className="stream-setup">
             <p>Unknown stream type. Please check your settings.</p>
