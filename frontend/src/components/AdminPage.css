@@ -293,19 +293,3 @@
     gap: 1rem;
   }
   
-  /* Stream selector in WebcamContainer */
-  .stream-selector {
-    position: absolute;
-    top: 1rem;
-    right: 1rem;
-    z-index: 10;
-  }
-  
-  .stream-select {
-    padding: 0.5rem;
-    border: 1px solid #ced4da;
-    border-radius: 4px;
-    background-color: white;
-    font-size: 0.875rem;
-    min-width: 200px;
-  }

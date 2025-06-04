@@ -128,14 +128,14 @@ const WebcamContainer = ({ onScreenshot, streams = [], selectedStreamId, onStrea
   const takeScreenshot = async () => {
     try {
       setIsCapturing(true);
-      
+
       // Show flash effect
       setShowFlash(true);
       setTimeout(() => setShowFlash(false), 200);
-      
+
       // Request screen capture with specific displaySurface preference
       const stream = await navigator.mediaDevices.getDisplayMedia({
-        video: { 
+        video: {
           cursor: "never",
           displaySurface: "browser" // Prioritize capturing the browser tab
         },
@@ -143,11 +143,11 @@ const WebcamContainer = ({ onScreenshot, streams = [], selectedStreamId, onStrea
         preferCurrentTab: true, // Chrome 103+ and Edge support this
         selfBrowserSurface: "include" // Firefox supports this
       });
-      
+
       // Create video element to capture a frame
       const video = document.createElement('video');
       video.srcObject = stream;
-      
+
       // Wait for video to load
       await new Promise(resolve => {
         video.onloadedmetadata = () => {
@@ -155,23 +155,23 @@ const WebcamContainer = ({ onScreenshot, streams = [], selectedStreamId, onStrea
           resolve();
         };
       });
-      
+
       // Wait a moment for the video to start playing
       await new Promise(resolve => setTimeout(resolve, 100));
-      
+
       // Capture a frame
       const canvas = document.createElement('canvas');
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
       const ctx = canvas.getContext('2d');
       ctx.drawImage(video, 0, 0);
-      
+
       // Apply filters to match the current view
       const filteredCanvas = document.createElement('canvas');
       filteredCanvas.width = canvas.width;
       filteredCanvas.height = canvas.height;
       const filteredCtx = filteredCanvas.getContext('2d');
-      
+
       // Apply CSS filters
       filteredCtx.filter = `
         contrast(${filters.contrast}%)
@@ -179,17 +179,17 @@ const WebcamContainer = ({ onScreenshot, streams = [], selectedStreamId, onStrea
         grayscale(${filters.grayscale}%)
         invert(${filters.invert}%)
       `;
-      
+
       filteredCtx.drawImage(canvas, 0, 0);
-      
+
       // Stop all tracks
       stream.getTracks().forEach(track => track.stop());
-      
+
       // Convert to blob
       const blob = await new Promise(resolve => {
         filteredCanvas.toBlob(resolve, 'image/png', 1.0);
       });
-      
+
       // Pass to callback
       if (blob && onScreenshot) {
         onScreenshot(blob);
@@ -206,75 +206,79 @@ const WebcamContainer = ({ onScreenshot, streams = [], selectedStreamId, onStrea
   };
 
   return (
-    <div
-      ref={containerRef}
-      className="webcam-container"
-      onMouseMove={handleDrag}
-      onMouseUp={handleDragEnd}
-      onMouseLeave={handleDragEnd}
-      onTouchMove={handleDrag}
-      onTouchEnd={handleDragEnd}
-      onWheel={handleWheel}
-      style={{ cursor: zoom > 1 ? 'grab' : 'default' }}
-    >
+    <div className="webcam-container-wrapper">
       <div
-        className="webcam-box"
-        onMouseDown={handleDragStart}
-        onTouchStart={handleDragStart}
-        style={{ 
-          cursor: zoom > 1 ? (isDragging ? 'grabbing' : 'grab') : 'default',
-          transform: `scale(${zoom}) translate(${position.x}px, ${position.y}px)`,
-          transformOrigin: 'center',
-          transition: isDragging ? 'none' : 'transform 0.1s ease-out'
-        }}
+        ref={containerRef}
+        className="webcam-container"
+        onMouseMove={handleDrag}
+        onMouseUp={handleDragEnd}
+        onMouseLeave={handleDragEnd}
+        onTouchMove={handleDrag}
+        onTouchEnd={handleDragEnd}
+        onWheel={handleWheel}
+        style={{ cursor: zoom > 1 ? 'grab' : 'default' }}
       >
-        {streams.length > 0 && (
-          <div className="stream-selector">
-            <select 
-              value={selectedStreamId || ''} 
-              onChange={(e) => onStreamSelect(e.target.value)}
-              className="stream-select"
-            >
-              <option value="">Select a stream</option>
-              {streams.map(stream => (
-                <option key={stream.id} value={stream.id}>
-                  {stream.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-
-        <StreamingOnlyWebcamFeed
-          zoom={zoom}
-          position={position}
-          filters={filters}
-          streamId={selectedStream?.stream_id}
-          streamType={selectedStream?.stream_type}
-          isLoading={isLoading}
-          onWheel={handleWheel}
-        />
-
-        {showFlash && <div className="screenshot-flash" />}
-        {showNotification && (
-          <div className="screenshot-notification">
-            Screenshot added to note!
-          </div>
-        )}
-      </div>
-
-      <div className="controls-container">
-        <ZoomControls zoomIn={zoomIn} zoomOut={zoomOut} />
-        <ContrastControls onFilterChange={handleFilterChange} />
-        <button
-          onClick={takeScreenshot}
-          className="btn btn-icon"
-          title="Take Screenshot"
-          disabled={isCapturing}
+        <div
+          className="webcam-box"
+          onMouseDown={handleDragStart}
+          onTouchStart={handleDragStart}
+          style={{
+            cursor: zoom > 1 ? (isDragging ? 'grabbing' : 'grab') : 'default',
+            transform: `scale(${zoom}) translate(${position.x}px, ${position.y}px)`,
+            transformOrigin: 'center',
+            transition: isDragging ? 'none' : 'transform 0.1s ease-out'
+          }}
         >
-          {isCapturing ? '⏳' : '📸'}
-        </button>
+          {streams.length > 0 && (
+            <div className="stream-selector">
+              <select
+                value={selectedStreamId || ''}
+                onChange={(e) => onStreamSelect(e.target.value)}
+                className="stream-select"
+              >
+                <option value="">Select a stream</option>
+                {streams.map(stream => (
+                  <option key={stream.id} value={stream.id}>
+                    {stream.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <div className="controls-container">
+            <ZoomControls zoomIn={zoomIn} zoomOut={zoomOut} />
+            <ContrastControls onFilterChange={handleFilterChange} />
+            <button
+              onClick={takeScreenshot}
+              className="btn btn-icon"
+              title="Take Screenshot"
+              disabled={isCapturing}
+            >
+              {isCapturing ? '⏳' : '📸'}
+            </button>
+          </div>
+
+          <StreamingOnlyWebcamFeed
+            zoom={zoom}
+            position={position}
+            filters={filters}
+            streamId={selectedStream?.stream_id}
+            streamType={selectedStream?.stream_type}
+            isLoading={isLoading}
+            onWheel={handleWheel}
+          />
+
+          {showFlash && <div className="screenshot-flash" />}
+          {showNotification && (
+            <div className="screenshot-notification">
+              Screenshot added to note!
+            </div>
+          )}
+        </div>
       </div>
+
+
     </div>
   );
 };
