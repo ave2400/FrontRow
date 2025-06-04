@@ -5,8 +5,7 @@ import ContrastControls from "./Contrast";
 import "./WebcamContainer.css";
 import "../styles/buttons.css";
 
-const WebcamContainer = ({ onScreenshot, streamId, streamType = "youtube", isLoading }) => {
-  console.log("WebcamContainer streamId:", streamId, "type:", streamType);
+const WebcamContainer = ({ onScreenshot, streams = [], selectedStreamId, onStreamSelect, isLoading }) => {
   const [zoom, setZoom] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -22,6 +21,9 @@ const WebcamContainer = ({ onScreenshot, streamId, streamType = "youtube", isLoa
   const dragStartRef = useRef({ x: 0, y: 0 });
   const positionRef = useRef({ x: 0, y: 0 });
   const containerRef = useRef(null);
+
+  // Get the selected stream
+  const selectedStream = streams.find(s => s.id === selectedStreamId) || null;
 
   // Calculate the maximum allowed movement based on zoom level
   const getBoundaries = useCallback(() => {
@@ -226,12 +228,29 @@ const WebcamContainer = ({ onScreenshot, streamId, streamType = "youtube", isLoa
           transition: isDragging ? 'none' : 'transform 0.1s ease-out'
         }}
       >
+        {streams.length > 0 && (
+          <div className="stream-selector">
+            <select 
+              value={selectedStreamId || ''} 
+              onChange={(e) => onStreamSelect(e.target.value)}
+              className="stream-select"
+            >
+              <option value="">Select a stream</option>
+              {streams.map(stream => (
+                <option key={stream.id} value={stream.id}>
+                  {stream.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
         <StreamingOnlyWebcamFeed
           zoom={zoom}
           position={position}
           filters={filters}
-          streamId={streamId}
-          streamType={streamType}
+          streamId={selectedStream?.stream_id}
+          streamType={selectedStream?.stream_type}
           isLoading={isLoading}
           onWheel={handleWheel}
         />
