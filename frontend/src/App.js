@@ -7,6 +7,7 @@ import AIAssistant from "./components/AIAssistant";
 import SignIn from './components/SignIn';
 import SignUp from './components/SignUp';
 import AdminPage from './components/AdminPage';
+import AdminOnly from './components/AdminOnly';
 import './App.css';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
@@ -202,7 +203,9 @@ function App() {
           <Route
             path="/admin"
             element={
-              <AdminPage />
+              <AdminOnly>
+                <AdminPage />
+              </AdminOnly>
             }
           />
         </Routes>
