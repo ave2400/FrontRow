@@ -193,9 +193,9 @@ function App() {
           <Route
             path="/admin"
             element={
-              // <AdminOnly>
+              <AdminOnly>
                 <AdminPage />
-              // </AdminOnly>
+              </AdminOnly>
             }
           />
         </Routes>
