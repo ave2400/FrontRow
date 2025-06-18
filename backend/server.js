@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
+const { supabase } = require('./utils/supabaseServerClient');
 
 const assistantService = require('./assistantService');
 const streamService = require('./streamService');
@@ -117,6 +118,43 @@ async function main() {
       }
     });
 
+    // Stream management endpoints
+    app.get('/api/streams/current', authMiddleware, async (req, res) => {
+      try {
+        const stream = await streamService.getCurrentStream();
+        res.json(stream || { is_active: false });
+      } catch (error) {
+        console.error('Error getting current stream:', error);
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    });
+
+    app.post('/api/streams/start', authMiddleware, async (req, res) => {
+      try {
+        const stream = await streamService.startStream(req.user.id);
+        if (!stream) {
+          return res.status(403).json({ error: 'Only admin users can start streams' });
+        }
+        res.json(stream);
+      } catch (error) {
+        console.error('Error starting stream:', error);
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    });
+
+    app.post('/api/streams/stop', authMiddleware, async (req, res) => {
+      try {
+        const success = await streamService.stopStream(req.user.id);
+        if (!success) {
+          return res.status(403).json({ error: 'Only admin users can stop streams' });
+        }
+        res.json({ message: 'Stream stopped successfully' });
+      } catch (error) {
+        console.error('Error stopping stream:', error);
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    });
+
     // Stream API Routes
     app.get('/api/streams', authMiddleware, async (req, res) => {
       try {
@@ -201,6 +239,53 @@ async function main() {
       } catch (error) {
         console.error('Error toggling stream status:', error);
         res.status(500).json({ error: 'Internal server error' });
+      }
+    });
+
+    // Admin status check endpoint
+    app.get('/api/users/admin-status', authMiddleware, async (req, res) => {
+      try {
+        const isAdmin = await streamService.isUserAdmin(req.user.id);
+        res.json({ isAdmin });
+      } catch (error) {
+        console.error('Error checking admin status:', error);
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    });
+
+    // WebRTC signaling endpoints
+    app.get('/api/streams/ice-servers', authMiddleware, async (req, res) => {
+      try {
+        const iceServers = await streamService.getIceServers();
+        res.json(iceServers);
+      } catch (err) {
+        console.error('Error getting ICE servers:', err);
+        res.status(500).json({ error: 'Failed to get ICE servers' });
+      }
+    });
+
+    app.post('/api/streams/:streamId/signal', authMiddleware, async (req, res) => {
+      try {
+        const { streamId } = req.params;
+        const { signal } = req.body;
+        const response = await streamService.handleSignaling(streamId, req.user.id, signal);
+        res.json({ signal: response });
+      } catch (err) {
+        console.error('Error handling WebRTC signal:', err);
+        res.status(500).json({ error: 'Failed to handle WebRTC signal' });
+      }
+    });
+
+    app.post('/api/streams/:streamId/ice-candidate', authMiddleware, async (req, res) => {
+      try {
+        const { streamId } = req.params;
+        const { candidate } = req.body;
+        // Store the ICE candidate for the stream
+        // In a real implementation, you would use a signaling server or WebSocket
+        res.json({ success: true });
+      } catch (err) {
+        console.error('Error handling ICE candidate:', err);
+        res.status(500).json({ error: 'Failed to handle ICE candidate' });
       }
     });
 

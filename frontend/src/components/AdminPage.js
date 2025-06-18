@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from 'react-router-dom';
+import StreamingOnlyWebcamFeed from './StreamingOnlyWebcamFeed';
 import "./AdminPage.css";
 import { supabase } from '../supabaseClient.js';
 
@@ -17,6 +19,9 @@ const AdminPage = () => {
   const [errorMessage, setErrorMessage] = useState("");
   const [updating, setUpdating] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [currentStream, setCurrentStream] = useState(null);
+  const navigate = useNavigate();
 
   // Fetch all streams when component mounts
   useEffect(() => {
@@ -54,6 +59,41 @@ const AdminPage = () => {
 
     fetchAllStreams();
   }, []);
+
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      try {
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError || !session) {
+          navigate('/signin');
+          return;
+        }
+
+        const response = await fetch(`${API_BASE_URL}/api/users/admin-status`, {
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to check admin status');
+        }
+        
+        const data = await response.json();
+        setIsAdmin(data.isAdmin);
+
+        if (!data.isAdmin) {
+          navigate('/');
+        }
+      } catch (error) {
+        console.error('Error checking admin status:', error);
+        navigate('/');
+      }
+    };
+
+    checkAdminStatus();
+  }, [navigate]);
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -280,6 +320,31 @@ const AdminPage = () => {
     }
   };
 
+  const handleStartStream = async () => {
+    try {
+      const response = await fetch('/api/streams/start', {
+        method: 'POST'
+      });
+      const data = await response.json();
+      if (data.id) {
+        setCurrentStream(data);
+      }
+    } catch (error) {
+      console.error('Error starting stream:', error);
+    }
+  };
+
+  const handleStopStream = async () => {
+    try {
+      await fetch('/api/streams/stop', {
+        method: 'POST'
+      });
+      setCurrentStream(null);
+    } catch (error) {
+      console.error('Error stopping stream:', error);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="admin-page">
@@ -289,6 +354,10 @@ const AdminPage = () => {
         </div>
       </div>
     );
+  }
+
+  if (!isAdmin) {
+    return null; // Will redirect in useEffect
   }
 
   return (
@@ -495,6 +564,32 @@ const AdminPage = () => {
             </form>
           </div>
         )}
+
+        <div className="stream-container">
+          <StreamingOnlyWebcamFeed
+            isAdmin={true}
+            isLoading={isLoading}
+            streamId={currentStream?.id}
+          />
+          
+          <div className="stream-controls">
+            {currentStream ? (
+              <button 
+                onClick={handleStopStream} 
+                className="btn btn-danger"
+              >
+                Stop Stream
+              </button>
+            ) : (
+              <button 
+                onClick={handleStartStream} 
+                className="btn btn-primary"
+              >
+                Start Stream
+              </button>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
