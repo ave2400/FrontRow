@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useRef, useMemo } from "react";
 import "./WebcamFeed.css";
 
 const StreamingOnlyWebcamFeed = ({ 
@@ -12,7 +12,6 @@ const StreamingOnlyWebcamFeed = ({
   iframeRef,
   onWheel
 }) => {
-  console.log("StreamingOnlyWebcamFeed streamId:", streamId, "type:", streamType);
   const iframeRefInternal = useRef(null);
   const finalIframeRef = iframeRef || iframeRefInternal;
   const {
@@ -22,13 +21,17 @@ const StreamingOnlyWebcamFeed = ({
     invert = 0
   } = filters || {};
 
-  // Prepare filter style string
-  const filterStyle = `
+  const filterStyle = useMemo(() => `
     contrast(${contrast}%)
     brightness(${brightness}%)
     grayscale(${grayscale}%)
     invert(${invert}%)
-  `;
+  `, [contrast, brightness, grayscale, invert]);
+
+  const youtubeUrl = useMemo(() => 
+    `https://www.youtube.com/embed/${streamId}?autoplay=1&mute=0&enablejsapi=1&origin=${window.location.origin}&rel=0&modestbranding=1&playsinline=1`,
+    [streamId]
+  );
 
   if (isLoading) {
     return (
@@ -57,7 +60,7 @@ const StreamingOnlyWebcamFeed = ({
               ref={finalIframeRef}
               width="100%"
               height="100%"
-              src={`https://www.youtube.com/embed/${streamId}?autoplay=1&mute=0&enablejsapi=1&origin=${window.location.origin}&rel=0&modestbranding=1&playsinline=1`}
+              src={youtubeUrl}
               frameBorder="0"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
@@ -93,4 +96,4 @@ const StreamingOnlyWebcamFeed = ({
   );
 };
 
-export default StreamingOnlyWebcamFeed;
+export default React.memo(StreamingOnlyWebcamFeed);

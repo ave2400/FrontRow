@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { supabase } from './supabaseClient';
 import WebcamContainer from "./components/WebcamContainer";
@@ -22,7 +22,6 @@ function App() {
 
   // Fetch auth session
   useEffect(() => {
-    // Get initial session
     const getSession = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
@@ -36,10 +35,8 @@ function App() {
 
     getSession();
 
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
-        console.log("Auth state changed:", session ? "User authenticated" : "User signed out");
         setSession(session);
       }
     );
@@ -47,89 +44,82 @@ function App() {
     return () => subscription?.unsubscribe?.();
   }, []);
 
+  // Memoize the fetch streams function
+  const fetchStreams = useCallback(async () => {
+    try {
+      const { data: { session: currentAuthSession } } = await supabase.auth.getSession();
+      const headers = {
+        'Content-Type': 'application/json',
+        ...(currentAuthSession?.access_token && {
+          'Authorization': `Bearer ${currentAuthSession.access_token}`
+        })
+      };
+
+      const response = await fetch(`${API_BASE_URL}/api/streams`, {
+        method: 'GET', 
+        headers,
+        credentials: 'include'
+      });
+
+      if (!response.ok) throw new Error(`Failed to fetch streams, status: ${response.status}`);
+      const streamsData = await response.json();
+
+      setStreams(prevStreams => {
+        if (JSON.stringify(prevStreams) === JSON.stringify(streamsData)) {
+          return prevStreams;
+        }
+        return streamsData;
+      });
+
+      if (!selectedStreamId && streamsData.length > 0) {
+        setSelectedStreamId(streamsData[0].id);
+      }
+      setStreamLoading(false);
+    } catch (error) {
+      console.error("Error fetching streams:", error);
+      setStreamLoading(false);
+    }
+  }, [selectedStreamId]);
+
   // Fetch active streams for regular users
   useEffect(() => {
-    console.log("Setting up streams fetching...");
-    let isActive = true; // Flag to prevent state updates after unmount
+    let isActive = true;
     
-    const fetchStreams = async () => {
-      if (!isActive) return;
-      
-      setStreamLoading(true);
-      try {
-        const { data: { session: currentAuthSession }, error: sessionError } = await supabase.auth.getSession();
-        let headers = { 'Content-Type': 'application/json' };
-        if (currentAuthSession?.access_token) {
-          headers['Authorization'] = `Bearer ${currentAuthSession.access_token}`;
-        } else {
-          console.warn("No active session token for fetching streams. Endpoint might fail if protected.");
-        }
-
-        const response = await fetch(`${API_BASE_URL}/api/streams`, {
-          method: 'GET', 
-          headers: headers,
-          credentials: 'include'
-        });
-
-        if (!response.ok) throw new Error(`Failed to fetch streams, status: ${response.status}`);
-        const streamsData = await response.json();
-        console.log("Streams fetched from backend:", streamsData);
-
-        if (isActive) {
-          setStreams(streamsData);
-          // If no stream is selected and we have streams, select the first one
-          if (!selectedStreamId && streamsData.length > 0) {
-            setSelectedStreamId(streamsData[0].id);
-          }
-          setStreamLoading(false);
-        }
-      } catch (error) {
-        console.error("Error fetching streams:", error);
-        if (isActive) {
-          setStreamLoading(false);
-        }
-      }
-    };
-
-    // Call fetch immediately
     fetchStreams();
 
-    // Set up polling for updates every 30 seconds
-    const pollInterval = setInterval(fetchStreams, 30000);
+    const pollInterval = setInterval(() => {
+      if (isActive) {
+        fetchStreams();
+      }
+    }, 30000);
 
     return () => {
       isActive = false;
       clearInterval(pollInterval);
     };
-  }, [selectedStreamId]);
+  }, [fetchStreams]);
 
-  const handleStreamSelect = (streamId) => {
+  const handleStreamSelect = useCallback((streamId) => {
     setSelectedStreamId(streamId);
-  };
+  }, []);
 
-  const handleScreenshot = (blob) => {
+  const handleScreenshot = useCallback((blob) => {
     if (blob instanceof Blob) {
       setCurrentNote(prev => ({
         ...prev,
         images: [...(prev.images || []), blob]
       }));
     } else if (typeof blob === 'function') {
-      // If it's a function, it's the callback from StickyNotes
-      // We don't need to do anything with it
       return;
     } else {
       console.error('Invalid screenshot data received:', blob);
     }
-  };
+  }, []);
 
-  // Debug render
-  console.log("Rendering App with:", {
-    isLoading: loading,
-    hasSession: !!session,
-    streams,
-    selectedStreamId,
-    isStreamLoading: streamLoading
-  });
+  const selectedStream = useMemo(() => 
+    streams.find(s => s.id === selectedStreamId) || null,
+    [streams, selectedStreamId]
+  );
 
   if (loading) {
     return <div className="loading">Loading authentication...</div>;
