@@ -16,6 +16,7 @@ const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 function App() {
   const [session, setSession] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [adminLoading, setAdminLoading] = useState(true);
   const [currentStream, setCurrentStream] = useState(null);
   const [streamLoading, setStreamLoading] = useState(true);
   const [currentNote, setCurrentNote] = useState({ title: "", content: "", images: [] });
@@ -51,16 +52,33 @@ function App() {
     const checkAdminStatus = async () => {
       if (session?.user) {
         try {
+          setAdminLoading(true);
+          console.log('Checking admin status for user:', session.user.id);
           const response = await fetch(`${API_BASE_URL}/api/users/admin-status`, {
             headers: {
               'Authorization': `Bearer ${session.access_token}`
             }
           });
+          
+          if (!response.ok) {
+            console.error('Admin status check failed:', response.status, response.statusText);
+            setIsAdmin(false);
+            setAdminLoading(false);
+            return;
+          }
+          
           const data = await response.json();
+          console.log('Admin status response:', data);
           setIsAdmin(data.isAdmin);
+          setAdminLoading(false);
         } catch (error) {
           console.error('Error checking admin status:', error);
+          setIsAdmin(false);
+          setAdminLoading(false);
         }
+      } else {
+        setIsAdmin(false);
+        setAdminLoading(false);
       }
     };
 
@@ -153,8 +171,8 @@ function App() {
     }));
   }, []);
 
-  if (streamLoading) {
-    return <div className="loading">Loading stream settings...</div>;
+  if (streamLoading || adminLoading) {
+    return <div className="loading">Loading...</div>;
   }
 
   return (
@@ -210,7 +228,9 @@ function App() {
             path="/admin"
             element={
               session ? (
-                isAdmin ? (
+                adminLoading ? (
+                  <div className="loading">Checking admin status...</div>
+                ) : isAdmin ? (
                   <AdminPage />
                 ) : (
                   <Navigate to="/" replace />
@@ -231,20 +251,6 @@ function App() {
             streamId={currentStream?.id}
             streamType={currentStream?.stream_type || 'local'}
           />
-          
-          {isAdmin && (
-            <div className="stream-controls">
-              {currentStream ? (
-                <button onClick={handleStopStream} className="btn btn-danger">
-                  Stop Stream
-                </button>
-              ) : (
-                <button onClick={handleStartStream} className="btn btn-primary">
-                  Start Stream
-                </button>
-              )}
-            </div>
-          )}
         </div>
       )}
     </div>

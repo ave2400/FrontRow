@@ -289,6 +289,34 @@ async function main() {
       }
     });
 
+    // Debug endpoint to test admin status
+    app.get('/api/debug/admin-status', authMiddleware, async (req, res) => {
+      try {
+        console.log('Debug: User ID from request:', req.user.id);
+        console.log('Debug: User object:', req.user);
+        
+        const { data, error } = await supabase.auth.admin.getUserById(req.user.id);
+        
+        if (error) {
+          console.error('Debug: Error getting user:', error);
+          return res.status(500).json({ error: error.message });
+        }
+        
+        console.log('Debug: Full user data:', data);
+        
+        res.json({
+          userId: req.user.id,
+          userData: data,
+          appMetadata: data.user?.app_metadata,
+          role: data.user?.app_metadata?.role,
+          isAdmin: data.user?.app_metadata?.role === 'admin'
+        });
+      } catch (err) {
+        console.error('Debug: Unexpected error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    });
+
     // Start the server after everything is initialized
     app.listen(port, () => {
       console.log(`Server running on port ${port}`);

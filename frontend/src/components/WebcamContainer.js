@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import StreamingOnlyWebcamFeed from "./StreamingOnlyWebcamFeed"
 import ZoomControls from "./ZoomControls";
 import ContrastControls from "./Contrast";
@@ -84,6 +84,19 @@ const WebcamContainer = ({ onScreenshot, streams = [], selectedStreamId, onStrea
       return newPosition;
     });
   };
+
+  // Add wheel event listener with passive: false
+  useEffect(() => {
+    const container = containerRef.current;
+    if (container) {
+      const handleWheelEvent = (e) => handleWheel(e);
+      container.addEventListener('wheel', handleWheelEvent, { passive: false });
+      
+      return () => {
+        container.removeEventListener('wheel', handleWheelEvent);
+      };
+    }
+  }, [zoom, position]);
 
   const handleDragStart = (e) => {
     if (zoom <= 1) return;
@@ -215,7 +228,6 @@ const WebcamContainer = ({ onScreenshot, streams = [], selectedStreamId, onStrea
         onMouseLeave={handleDragEnd}
         onTouchMove={handleDrag}
         onTouchEnd={handleDragEnd}
-        onWheel={handleWheel}
         style={{ cursor: zoom > 1 ? 'grab' : 'default' }}
       >
         <div
@@ -266,7 +278,6 @@ const WebcamContainer = ({ onScreenshot, streams = [], selectedStreamId, onStrea
             streamId={selectedStream?.stream_id}
             streamType={selectedStream?.stream_type}
             isLoading={isLoading}
-            onWheel={handleWheel}
           />
 
           {showFlash && <div className="screenshot-flash" />}

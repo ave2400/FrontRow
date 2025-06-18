@@ -67,6 +67,8 @@ const streamService = {
    */
   async isUserAdmin(userId) {
     try {
+      console.log('Checking admin status for user ID:', userId);
+      
       // Get user's role claim
       const { data, error } = await supabase.auth.admin.getUserById(userId);
       
@@ -75,9 +77,16 @@ const streamService = {
         return false;
       }
 
+      console.log('User data:', data);
+      
       // Check if user has admin role in claims
       const userRole = data.user?.app_metadata?.role;
-      return userRole === 'admin';
+      console.log('User role:', userRole);
+      
+      const isAdmin = userRole === 'admin';
+      console.log('Is admin:', isAdmin);
+      
+      return isAdmin;
     } catch (err) {
       console.error('Unexpected error checking admin status:', err);
       return false;
