@@ -13,7 +13,7 @@ function AdminOnly({ children }) {
 
       if (error) {
         console.error('Error checking admin status:', error);
-        setError('Failed to check admin status. Please try again.');
+        // setError('Failed to check admin status. Please try again.');
         setLoading(false);
         return;
       }
