@@ -6,6 +6,8 @@ import { supabase } from '../supabaseClient.js';
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 const AdminPage = () => {
+  console.log('AdminPage component is mounting...');
+  
   const [streamList, setStreamList] = useState([]);
   const [newStream, setNewStream] = useState({
     name: '',
@@ -22,6 +24,7 @@ const AdminPage = () => {
 
   // Fetch all streams when component mounts
   useEffect(() => {
+    console.log('AdminPage useEffect running - fetching streams...');
     const fetchAllStreams = async () => {
       try {
         setIsLoading(true);
@@ -335,93 +338,102 @@ const AdminPage = () => {
         {errorMessage && <div className="error-message">{errorMessage}</div>}
 
         <div className="streams-list">
-          <h3>Existing Streams</h3>
-          <table className="streams-table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Stream ID</th>
-                <th>Type</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {streamList.map(stream => (
-                <tr key={stream.id}>
-                  <td>{stream.name}</td>
-                  <td>{stream.stream_id}</td>
-                  <td>{stream.stream_type}</td>
-                  <td>{stream.is_active ? 'Active' : 'Inactive'}</td>
-                  <td>
-                    <button
-                      onClick={() => setEditingStream(stream)}
-                      className="btn btn-secondary"
-                      disabled={updating}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleToggleActive(stream.id, stream.is_active)}
-                      className="btn btn-primary"
-                      disabled={updating}
-                    >
-                      {stream.is_active ? 'Deactivate' : 'Activate'}
-                    </button>
-                    <button
-                      onClick={() => handleDelete(stream.id)}
-                      className="btn btn-danger"
-                      disabled={updating}
-                    >
-                      Delete
-                    </button>
-                  </td>
+          <h3>Active Streams</h3>
+          {streamList.length === 0 ? (
+            <p>No streams configured yet.</p>
+          ) : (
+            <table className="streams-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Type</th>
+                  <th>Status</th>
+                  <th>Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {streamList.map(stream => (
+                  <tr key={stream.id}>
+                    <td>{stream.name}</td>
+                    <td>{stream.stream_type}</td>
+                    <td>
+                      <button
+                        className={`btn btn-sm ${stream.is_active ? 'btn-success' : 'btn-secondary'}`}
+                        onClick={() => handleToggleActive(stream.id, stream.is_active)}
+                        disabled={updating}
+                      >
+                        {stream.is_active ? 'Active' : 'Inactive'}
+                      </button>
+                    </td>
+                    <td>
+                      <button
+                        onClick={() => setEditingStream(stream)}
+                        className="btn btn-sm btn-primary"
+                        disabled={updating}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDelete(stream.id)}
+                        className="btn btn-sm btn-danger"
+                        disabled={updating}
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
 
         {editingStream ? (
-          <div className="form-section">
+          <div className="edit-stream-form">
             <h3>Edit Stream</h3>
             <form onSubmit={handleUpdate}>
               <div className="form-group">
-                <label>Name:</label>
+                <label htmlFor="name">Stream Name:</label>
                 <input
                   type="text"
+                  id="name"
                   name="name"
                   value={editingStream.name}
                   onChange={handleEditInputChange}
-                  disabled={updating}
                   required
+                  disabled={updating}
                 />
               </div>
 
               <div className="form-group">
-                <label>Stream ID:</label>
-                <input
-                  type="text"
-                  name="streamId"
-                  value={editingStream.stream_id}
-                  onChange={handleEditInputChange}
-                  disabled={updating}
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Stream Type:</label>
+                <label htmlFor="streamType">Stream Type:</label>
                 <select
+                  id="streamType"
                   name="streamType"
                   value={editingStream.stream_type}
                   onChange={handleEditInputChange}
                   disabled={updating}
                 >
-                  <option value="youtube">YouTube</option>
-                  <option value="zoom">Zoom</option>
+                  <option value="youtube">YouTube Stream</option>
+                  <option value="zoom">Zoom Meeting</option>
                   <option value="local">Local</option>
                 </select>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="streamId">Stream ID/URL:</label>
+                <input
+                  type="text"
+                  id="streamId"
+                  name="streamId"
+                  value={editingStream.stream_id}
+                  onChange={handleEditInputChange}
+                  placeholder={editingStream.stream_type === 'youtube' ? 
+                    "Enter YouTube Stream ID (e.g., dQw4w9WgXcQ)" : 
+                    "Enter Zoom Meeting URL (from 'Join from browser' link)"}
+                  required
+                  disabled={updating}
+                />
               </div>
 
               <div className="form-group">
@@ -453,45 +465,51 @@ const AdminPage = () => {
             </form>
           </div>
         ) : (
-          <div className="form-section">
-            <h3>Create New Stream</h3>
+          <div className="new-stream-form">
+            <h3>Add New Stream</h3>
             <form onSubmit={handleSubmit}>
               <div className="form-group">
-                <label>Name:</label>
+                <label htmlFor="newName">Stream Name:</label>
                 <input
                   type="text"
+                  id="newName"
                   name="name"
                   value={newStream.name}
                   onChange={handleInputChange}
-                  disabled={updating}
                   required
+                  disabled={updating}
                 />
               </div>
 
               <div className="form-group">
-                <label>Stream ID:</label>
-                <input
-                  type="text"
-                  name="streamId"
-                  value={newStream.streamId}
-                  onChange={handleInputChange}
-                  disabled={updating}
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Stream Type:</label>
+                <label htmlFor="newStreamType">Stream Type:</label>
                 <select
+                  id="newStreamType"
                   name="streamType"
                   value={newStream.streamType}
                   onChange={handleInputChange}
                   disabled={updating}
                 >
-                  <option value="youtube">YouTube</option>
-                  <option value="zoom">Zoom</option>
+                  <option value="youtube">YouTube Stream</option>
+                  <option value="zoom">Zoom Meeting</option>
                   <option value="local">Local</option>
                 </select>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="newStreamId">Stream ID/URL:</label>
+                <input
+                  type="text"
+                  id="newStreamId"
+                  name="streamId"
+                  value={newStream.streamId}
+                  onChange={handleInputChange}
+                  placeholder={newStream.streamType === 'youtube' ? 
+                    "Enter YouTube Stream ID (e.g., dQw4w9WgXcQ)" : 
+                    "Enter Zoom Meeting URL (from 'Join from browser' link)"}
+                  required
+                  disabled={updating}
+                />
               </div>
 
               <div className="form-group">
@@ -515,7 +533,6 @@ const AdminPage = () => {
         )}
 
         <div className="stream-container">
-          <h3>Local Stream Control</h3>
           <StreamingOnlyWebcamFeed
             isAdmin={true}
             isLoading={isLoading}

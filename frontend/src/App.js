@@ -22,6 +22,7 @@ function App() {
   const [currentNote, setCurrentNote] = useState({ title: "", content: "", images: [] });
   const [streams, setStreams] = useState([]);
   const [selectedStreamId, setSelectedStreamId] = useState("");
+  const [hasInitiallyLoaded, setHasInitiallyLoaded] = useState(false);
 
   // Fetch auth session
   useEffect(() => {
@@ -52,7 +53,10 @@ function App() {
     const checkAdminStatus = async () => {
       if (session?.user) {
         try {
-          setAdminLoading(true);
+          // Only show loading on initial load, not when switching tabs
+          if (!hasInitiallyLoaded) {
+            setAdminLoading(true);
+          }
           console.log('Checking admin status for user:', session.user.id);
           const response = await fetch(`${API_BASE_URL}/api/users/admin-status`, {
             headers: {
@@ -64,6 +68,7 @@ function App() {
             console.error('Admin status check failed:', response.status, response.statusText);
             setIsAdmin(false);
             setAdminLoading(false);
+            setHasInitiallyLoaded(true);
             return;
           }
           
@@ -71,18 +76,28 @@ function App() {
           console.log('Admin status response:', data);
           setIsAdmin(data.isAdmin);
           setAdminLoading(false);
+          // Add a small delay to ensure state is properly set
+          setTimeout(() => {
+            setHasInitiallyLoaded(true);
+          }, 100);
         } catch (error) {
           console.error('Error checking admin status:', error);
           setIsAdmin(false);
           setAdminLoading(false);
+          setHasInitiallyLoaded(true);
         }
       } else {
+        // Only reset admin status if there's no session
         setIsAdmin(false);
         setAdminLoading(false);
+        setHasInitiallyLoaded(true);
       }
     };
 
-    checkAdminStatus();
+    // Only check admin status if we haven't already confirmed it for this session
+    if (!hasInitiallyLoaded || (session?.user && !isAdmin)) {
+      checkAdminStatus();
+    }
   }, [session]);
 
   // Memoize the fetch streams function
@@ -171,7 +186,7 @@ function App() {
     }));
   }, []);
 
-  if (streamLoading || adminLoading) {
+  if ((streamLoading || adminLoading) && !hasInitiallyLoaded) {
     return <div className="loading">Loading...</div>;
   }
 
@@ -225,16 +240,63 @@ function App() {
             }
           />
           <Route
+            path="/test"
+            element={
+              <div style={{ padding: '20px', background: 'green', color: 'white' }}>
+                <h1>Test Route Working</h1>
+                <p>If you can see this, React Router is working correctly.</p>
+              </div>
+            }
+          />
+          <Route
             path="/admin"
             element={
               session ? (
-                adminLoading ? (
-                  <div className="loading">Checking admin status...</div>
-                ) : isAdmin ? (
-                  <AdminPage />
-                ) : (
-                  <Navigate to="/" replace />
-                )
+                (() => {
+                  console.log('Admin route check:', { 
+                    adminLoading, 
+                    hasInitiallyLoaded, 
+                    isAdmin, 
+                    session: !!session 
+                  });
+                  
+                  // If still loading initially, show loading
+                  if (!hasInitiallyLoaded) {
+                    console.log('Still loading initially, showing loading screen');
+                    return <div className="loading">Loading...</div>;
+                  }
+                  
+                  // If admin check is still loading, show loading
+                  if (adminLoading) {
+                    console.log('Admin check still loading, showing loading screen');
+                    return <div className="loading">Checking admin status...</div>;
+                  }
+                  
+                  // If we have a session but admin status is still false, wait a bit more
+                  if (session && !isAdmin && hasInitiallyLoaded) {
+                    console.log('Session exists but admin status is false, waiting...');
+                    return <div className="loading">Verifying admin status...</div>;
+                  }
+                  
+                  // If admin status is confirmed, show admin page
+                  if (isAdmin) {
+                    console.log('Admin confirmed, rendering AdminPage');
+                    try {
+                      return <AdminPage />;
+                    } catch (error) {
+                      console.error('Error rendering AdminPage:', error);
+                      return (
+                        <div style={{ padding: '20px', background: 'red', color: 'white' }}>
+                          <h1>Error rendering AdminPage</h1>
+                          <p>{error.message}</p>
+                        </div>
+                      );
+                    }
+                  } else {
+                    console.log('Not admin, redirecting to home');
+                    return <Navigate to="/" replace />;
+                  }
+                })()
               ) : (
                 <Navigate to="/signin" replace />
               )
