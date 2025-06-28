@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState, useMemo } from "react";
 import "./WebcamFeed.css";
+import { supabase } from '../supabaseClient.js';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
@@ -43,19 +44,33 @@ const StreamingOnlyWebcamFeed = ({
   );
 
   useEffect(() => {
-    if (isAdmin && streamType === 'local') {
+    console.log('StreamingOnlyWebcamFeed useEffect:', { isAdmin, streamId, streamType, isStreaming });
+    
+    if (isAdmin && streamType === 'local' && streamId) {
+      // Only start local stream if we have a streamId (meaning stream is active)
+      console.log('Starting local stream for admin...');
       startLocalStream();
     } else if (streamId && streamType !== 'local') {
       // Handle external platforms (YouTube, Zoom)
+      console.log('Setting external stream as active...');
       setIsStreaming(true);
     } else if (streamId && streamType === 'local' && !isAdmin) {
+      console.log('Connecting to local stream as viewer...');
       connectToStream();
+    } else {
+      // No streamId or stream stopped - stop any active streams
+      console.log('No stream active - stopping any existing streams...');
+      stopStream();
     }
+  }, [isAdmin, streamId, streamType]);
 
+  // Cleanup effect to ensure camera is stopped when component unmounts
+  useEffect(() => {
     return () => {
+      console.log('Component unmounting - cleaning up streams...');
       stopStream();
     };
-  }, [isAdmin, streamId, streamType]);
+  }, []);
 
   const startLocalStream = async () => {
     try {
@@ -79,9 +94,25 @@ const StreamingOnlyWebcamFeed = ({
 
   const connectToStream = async () => {
     try {
+      // Get user session for authentication
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session) {
+        throw new Error('User not authenticated');
+      }
+
       // Get ICE servers configuration
-      const response = await fetch(`${API_BASE_URL}/api/streams/ice-servers`);
-      const { iceServers } = await response.json();
+      const iceResponse = await fetch(`${API_BASE_URL}/api/streams/ice-servers`, {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
+        }
+      });
+      
+      if (!iceResponse.ok) {
+        throw new Error('Failed to get ICE servers');
+      }
+      
+      const { iceServers } = await iceResponse.json();
 
       // Create peer connection
       peerConnectionRef.current = new RTCPeerConnection({ iceServers });
@@ -92,7 +123,10 @@ const StreamingOnlyWebcamFeed = ({
           // Send ICE candidate to signaling server
           fetch(`${API_BASE_URL}/api/streams/${streamId}/ice-candidate`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${session.access_token}`
+            },
             body: JSON.stringify({ candidate: event.candidate })
           });
         }
@@ -111,34 +145,64 @@ const StreamingOnlyWebcamFeed = ({
 
       const signalResponse = await fetch(`${API_BASE_URL}/api/streams/${streamId}/signal`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
         body: JSON.stringify({ signal: offer })
       });
 
+      if (!signalResponse.ok) {
+        throw new Error(`Signaling failed: ${signalResponse.status}`);
+      }
+
       const { signal: answer } = await signalResponse.json();
+      
+      if (!answer || !answer.type || !answer.sdp) {
+        throw new Error('Invalid signaling response');
+      }
+      
       await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(answer));
 
       setIsStreaming(true);
       setError(null);
     } catch (err) {
       console.error('Error connecting to stream:', err);
-      setError('Failed to connect to stream. Please try again later.');
+      setError('Failed to connect to stream. This feature requires a proper WebRTC signaling server. For now, only the admin can see their camera feed.');
     }
   };
 
   const stopStream = () => {
+    console.log('Stopping stream and cleaning up...');
+    
+    // Stop all media tracks
     if (finalVideoRef.current && finalVideoRef.current.srcObject) {
       const tracks = finalVideoRef.current.srcObject.getTracks();
-      tracks.forEach(track => track.stop());
+      tracks.forEach(track => {
+        console.log('Stopping track:', track.kind);
+        track.stop();
+      });
       finalVideoRef.current.srcObject = null;
     }
 
+    // Stop the stored stream
+    if (stream) {
+      const tracks = stream.getTracks();
+      tracks.forEach(track => {
+        console.log('Stopping stored track:', track.kind);
+        track.stop();
+      });
+      setStream(null);
+    }
+
+    // Close peer connection
     if (peerConnectionRef.current) {
       peerConnectionRef.current.close();
       peerConnectionRef.current = null;
     }
 
     setIsStreaming(false);
+    setError(null);
   };
 
   if (isLoading) {

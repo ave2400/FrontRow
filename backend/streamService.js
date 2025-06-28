@@ -37,7 +37,7 @@ const streamService = {
       // If multiple streams are active, deactivate all but the most recent one
       if (activeStreams && activeStreams.length > 1) {
         const sortedStreams = activeStreams.sort((a, b) => 
-          new Date(b.started_at) - new Date(a.started_at)
+          new Date(b.created_at) - new Date(a.created_at)
         );
         const [mostRecent, ...others] = sortedStreams;
 
@@ -100,12 +100,18 @@ const streamService = {
    */
   async startStream(userId) {
     try {
+      console.log('startStream called with userId:', userId);
+      
       // Check if user is admin
       const isAdmin = await this.isUserAdmin(userId);
+      console.log('startStream - isAdmin result:', isAdmin);
+      
       if (!isAdmin) {
         console.error('Non-admin user attempted to start stream');
         return null;
       }
+
+      console.log('Admin confirmed, proceeding to start stream...');
 
       // Deactivate any existing streams
       await supabase
@@ -117,10 +123,10 @@ const streamService = {
       const { data, error } = await supabase
         .from(STREAMS_TABLE)
         .insert({
-          user_id: userId,
           is_active: true,
-          stream_type: 'local', // Changed from youtube/zoom to local
-          started_at: new Date().toISOString()
+          stream_type: 'local', // Local camera/microphone streaming
+          name: 'Local Stream',
+          stream_id: 'local'
         })
         .select()
         .single();
@@ -130,6 +136,7 @@ const streamService = {
         return null;
       }
 
+      console.log('Stream started successfully:', data);
       return data;
     } catch (err) {
       console.error('Unexpected error starting stream:', err);
@@ -154,8 +161,7 @@ const streamService = {
       const { error } = await supabase
         .from(STREAMS_TABLE)
         .update({ 
-          is_active: false,
-          ended_at: new Date().toISOString()
+          is_active: false
         })
         .eq('is_active', true);
 
@@ -376,12 +382,37 @@ const streamService = {
         throw new Error('Stream not found');
       }
 
-      // Store the signal in Redis or similar for real-time communication
-      // For now, we'll just return a mock response
-      return {
-        type: 'answer',
-        sdp: 'mock-sdp-response'
-      };
+      // Check if the stream is active
+      if (!stream.is_active) {
+        throw new Error('Stream is not active');
+      }
+
+      // Simple signaling mechanism
+      // TODO: Use WebSockets or a proper signaling server
+      
+      if (signal.type === 'offer') {
+        // This is a viewer trying to connect to the stream
+        // TODO: orward this to the broadcaster
+        // For now, we are creating a simple answer
+        return {
+          type: 'answer',
+          sdp: 'v=0\r\n' +
+               'o=- 1234567890 2 IN IP4 127.0.0.1\r\n' +
+               's=-\r\n' +
+               't=0 0\r\n' +
+               'a=group:BUNDLE 0\r\n' +
+               'm=video 9 UDP/TLS/RTP/SAVPF 96\r\n' +
+               'c=IN IP4 0.0.0.0\r\n' +
+               'a=mid:0\r\n' +
+               'a=sendonly\r\n' +
+               'a=rtpmap:96 H264/90000\r\n'
+        };
+      } else if (signal.type === 'answer') {
+        // This is a response to an offer
+        return signal;
+      } else {
+        throw new Error('Invalid signal type');
+      }
     } catch (err) {
       console.error('Error handling WebRTC signaling:', err);
       throw err;

@@ -312,3 +312,24 @@
     gap: 1rem;
   }
   
+  /* Add styles for local stream input */
+  .local-stream-input {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .local-stream-note {
+    color: #666;
+    font-size: 14px;
+    margin: 0;
+    font-style: italic;
+  }
+  
+  .access-granted {
+    color: #28a745;
+    font-size: 14px;
+    margin: 0;
+    font-weight: 500;
+  }
+  

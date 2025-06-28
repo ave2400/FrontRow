@@ -131,10 +131,13 @@ async function main() {
 
     app.post('/api/streams/start', authMiddleware, async (req, res) => {
       try {
+        console.log('Stream start endpoint called with user ID:', req.user.id);
         const stream = await streamService.startStream(req.user.id);
         if (!stream) {
+          console.log('Stream start failed - returning 403');
           return res.status(403).json({ error: 'Only admin users can start streams' });
         }
+        console.log('Stream start successful:', stream);
         res.json(stream);
       } catch (error) {
         console.error('Error starting stream:', error);
@@ -152,6 +155,53 @@ async function main() {
       } catch (error) {
         console.error('Error stopping stream:', error);
         res.status(500).json({ error: 'Internal server error' });
+      }
+    });
+
+    // Admin status check endpoint
+    app.get('/api/users/admin-status', authMiddleware, async (req, res) => {
+      try {
+        const isAdmin = await streamService.isUserAdmin(req.user.id);
+        res.json({ isAdmin });
+      } catch (error) {
+        console.error('Error checking admin status:', error);
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    });
+
+    // WebRTC signaling endpoints - MUST come before /:id routes
+    app.get('/api/streams/ice-servers', authMiddleware, async (req, res) => {
+      try {
+        const iceServers = await streamService.getIceServers();
+        res.json(iceServers);
+      } catch (err) {
+        console.error('Error getting ICE servers:', err);
+        res.status(500).json({ error: 'Failed to get ICE servers' });
+      }
+    });
+
+    app.post('/api/streams/:streamId/signal', authMiddleware, async (req, res) => {
+      try {
+        const { streamId } = req.params;
+        const { signal } = req.body;
+        const response = await streamService.handleSignaling(streamId, req.user.id, signal);
+        res.json({ signal: response });
+      } catch (err) {
+        console.error('Error handling WebRTC signal:', err);
+        res.status(500).json({ error: 'Failed to handle WebRTC signal' });
+      }
+    });
+
+    app.post('/api/streams/:streamId/ice-candidate', authMiddleware, async (req, res) => {
+      try {
+        const { streamId } = req.params;
+        const { candidate } = req.body;
+        // Store the ICE candidate for the stream
+        // In a real implementation, you would use a signaling server or WebSocket
+        res.json({ success: true });
+      } catch (err) {
+        console.error('Error handling ICE candidate:', err);
+        res.status(500).json({ error: 'Failed to handle ICE candidate' });
       }
     });
 
@@ -239,53 +289,6 @@ async function main() {
       } catch (error) {
         console.error('Error toggling stream status:', error);
         res.status(500).json({ error: 'Internal server error' });
-      }
-    });
-
-    // Admin status check endpoint
-    app.get('/api/users/admin-status', authMiddleware, async (req, res) => {
-      try {
-        const isAdmin = await streamService.isUserAdmin(req.user.id);
-        res.json({ isAdmin });
-      } catch (error) {
-        console.error('Error checking admin status:', error);
-        res.status(500).json({ error: 'Internal server error' });
-      }
-    });
-
-    // WebRTC signaling endpoints
-    app.get('/api/streams/ice-servers', authMiddleware, async (req, res) => {
-      try {
-        const iceServers = await streamService.getIceServers();
-        res.json(iceServers);
-      } catch (err) {
-        console.error('Error getting ICE servers:', err);
-        res.status(500).json({ error: 'Failed to get ICE servers' });
-      }
-    });
-
-    app.post('/api/streams/:streamId/signal', authMiddleware, async (req, res) => {
-      try {
-        const { streamId } = req.params;
-        const { signal } = req.body;
-        const response = await streamService.handleSignaling(streamId, req.user.id, signal);
-        res.json({ signal: response });
-      } catch (err) {
-        console.error('Error handling WebRTC signal:', err);
-        res.status(500).json({ error: 'Failed to handle WebRTC signal' });
-      }
-    });
-
-    app.post('/api/streams/:streamId/ice-candidate', authMiddleware, async (req, res) => {
-      try {
-        const { streamId } = req.params;
-        const { candidate } = req.body;
-        // Store the ICE candidate for the stream
-        // In a real implementation, you would use a signaling server or WebSocket
-        res.json({ success: true });
-      } catch (err) {
-        console.error('Error handling ICE candidate:', err);
-        res.status(500).json({ error: 'Failed to handle ICE candidate' });
       }
     });
 

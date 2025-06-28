@@ -240,15 +240,6 @@ function App() {
             }
           />
           <Route
-            path="/test"
-            element={
-              <div style={{ padding: '20px', background: 'green', color: 'white' }}>
-                <h1>Test Route Working</h1>
-                <p>If you can see this, React Router is working correctly.</p>
-              </div>
-            }
-          />
-          <Route
             path="/admin"
             element={
               session ? (
@@ -305,16 +296,7 @@ function App() {
         </Routes>
       </Router>
       
-      {session && (
-        <div className="stream-container">
-          <StreamingOnlyWebcamFeed
-            isAdmin={isAdmin}
-            isLoading={streamLoading}
-            streamId={currentStream?.id}
-            streamType={currentStream?.stream_type || 'local'}
-          />
-        </div>
-      )}
+
     </div>
   );
 }

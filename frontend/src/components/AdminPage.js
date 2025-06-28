@@ -21,6 +21,7 @@ const AdminPage = () => {
   const [updating, setUpdating] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [currentStream, setCurrentStream] = useState(null);
+  const [cameraAccessGranted, setCameraAccessGranted] = useState(false);
 
   // Fetch all streams when component mounts
   useEffect(() => {
@@ -76,6 +77,25 @@ const AdminPage = () => {
     }));
   };
 
+  const handleRequestCameraAccess = async () => {
+    try {
+      const mediaStream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true
+      });
+      
+      // Stop the stream immediately after testing access
+      mediaStream.getTracks().forEach(track => track.stop());
+      
+      setCameraAccessGranted(true);
+      setSuccessMessage("Camera and microphone access granted!");
+      setTimeout(() => setSuccessMessage(""), 3000);
+    } catch (err) {
+      console.error('Error accessing media devices:', err);
+      setErrorMessage('Failed to access camera and microphone. Please ensure you have granted the necessary permissions.');
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -92,6 +112,12 @@ const AdminPage = () => {
 
       const accessToken = session.access_token;
 
+      // For local streams, we don't need a streamId
+      const streamData = {
+        ...newStream,
+        streamId: newStream.streamType === 'local' ? 'local-stream' : newStream.streamId
+      };
+
       const response = await fetch(`${API_BASE_URL}/api/streams`, {
         method: 'POST',
         headers: {
@@ -99,7 +125,7 @@ const AdminPage = () => {
           'Authorization': `Bearer ${accessToken}`
         },
         credentials: 'include',
-        body: JSON.stringify(newStream)
+        body: JSON.stringify(streamData)
       });
 
       if (!response.ok) {
@@ -149,6 +175,12 @@ const AdminPage = () => {
 
       const accessToken = session.access_token;
 
+      // For local streams, we don't need a streamId
+      const streamData = {
+        ...editingStream,
+        streamId: editingStream.stream_type === 'local' ? 'local-stream' : editingStream.stream_id
+      };
+
       const response = await fetch(`${API_BASE_URL}/api/streams/${editingStream.id}`, {
         method: 'PUT',
         headers: {
@@ -156,7 +188,7 @@ const AdminPage = () => {
           'Authorization': `Bearer ${accessToken}`
         },
         credentials: 'include',
-        body: JSON.stringify(editingStream)
+        body: JSON.stringify(streamData)
       });
 
       if (!response.ok) {
@@ -287,6 +319,9 @@ const AdminPage = () => {
 
   const handleStartStream = async () => {
     try {
+      setErrorMessage("");
+      setSuccessMessage("");
+      
       const { data: { session } } = await supabase.auth.getSession();
       const response = await fetch(`${API_BASE_URL}/api/streams/start`, {
         method: 'POST',
@@ -294,27 +329,50 @@ const AdminPage = () => {
           'Authorization': `Bearer ${session.access_token}`
         }
       });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Failed to start stream: ${response.status}`);
+      }
+      
       const data = await response.json();
       if (data.id) {
         setCurrentStream(data);
+        setSuccessMessage("Stream started successfully!");
+        setTimeout(() => setSuccessMessage(""), 3000);
       }
     } catch (error) {
       console.error('Error starting stream:', error);
+      setErrorMessage(error.message || "Failed to start stream");
+      setTimeout(() => setErrorMessage(""), 5000);
     }
   };
 
   const handleStopStream = async () => {
     try {
+      setErrorMessage("");
+      setSuccessMessage("");
+      
       const { data: { session } } = await supabase.auth.getSession();
-      await fetch(`${API_BASE_URL}/api/streams/stop`, {
+      const response = await fetch(`${API_BASE_URL}/api/streams/stop`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`
         }
       });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Failed to stop stream: ${response.status}`);
+      }
+      
       setCurrentStream(null);
+      setSuccessMessage("Stream stopped successfully!");
+      setTimeout(() => setSuccessMessage(""), 3000);
     } catch (error) {
       console.error('Error stopping stream:', error);
+      setErrorMessage(error.message || "Failed to stop stream");
+      setTimeout(() => setErrorMessage(""), 5000);
     }
   };
 
@@ -422,18 +480,35 @@ const AdminPage = () => {
 
               <div className="form-group">
                 <label htmlFor="streamId">Stream ID/URL:</label>
-                <input
-                  type="text"
-                  id="streamId"
-                  name="streamId"
-                  value={editingStream.stream_id}
-                  onChange={handleEditInputChange}
-                  placeholder={editingStream.stream_type === 'youtube' ? 
-                    "Enter YouTube Stream ID (e.g., dQw4w9WgXcQ)" : 
-                    "Enter Zoom Meeting URL (from 'Join from browser' link)"}
-                  required
-                  disabled={updating}
-                />
+                {editingStream.stream_type === 'local' ? (
+                  <div className="local-stream-input">
+                    <p className="local-stream-note">Local streams don't require a URL. Click the button below to request camera access.</p>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={handleRequestCameraAccess}
+                      disabled={updating}
+                    >
+                      Request Camera & Microphone Access
+                    </button>
+                    {cameraAccessGranted && (
+                      <p className="access-granted">✓ Camera and microphone access granted</p>
+                    )}
+                  </div>
+                ) : (
+                  <input
+                    type="text"
+                    id="streamId"
+                    name="streamId"
+                    value={editingStream.stream_id}
+                    onChange={handleEditInputChange}
+                    placeholder={editingStream.stream_type === 'youtube' ? 
+                      "Enter YouTube Stream ID (e.g., dQw4w9WgXcQ)" : 
+                      "Enter Zoom Meeting URL (from 'Join from browser' link)"}
+                    required={editingStream.stream_type !== 'local'}
+                    disabled={updating}
+                  />
+                )}
               </div>
 
               <div className="form-group">
@@ -498,18 +573,35 @@ const AdminPage = () => {
 
               <div className="form-group">
                 <label htmlFor="newStreamId">Stream ID/URL:</label>
-                <input
-                  type="text"
-                  id="newStreamId"
-                  name="streamId"
-                  value={newStream.streamId}
-                  onChange={handleInputChange}
-                  placeholder={newStream.streamType === 'youtube' ? 
-                    "Enter YouTube Stream ID (e.g., dQw4w9WgXcQ)" : 
-                    "Enter Zoom Meeting URL (from 'Join from browser' link)"}
-                  required
-                  disabled={updating}
-                />
+                {newStream.streamType === 'local' ? (
+                  <div className="local-stream-input">
+                    <p className="local-stream-note">Local streams don't require a URL. Click the button below to request camera access.</p>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={handleRequestCameraAccess}
+                      disabled={updating}
+                    >
+                      Request Camera & Microphone Access
+                    </button>
+                    {cameraAccessGranted && (
+                      <p className="access-granted">✓ Camera and microphone access granted</p>
+                    )}
+                  </div>
+                ) : (
+                  <input
+                    type="text"
+                    id="newStreamId"
+                    name="streamId"
+                    value={newStream.streamId}
+                    onChange={handleInputChange}
+                    placeholder={newStream.streamType === 'youtube' ? 
+                      "Enter YouTube Stream ID (e.g., dQw4w9WgXcQ)" : 
+                      "Enter Zoom Meeting URL (from 'Join from browser' link)"}
+                    required={newStream.streamType !== 'local'}
+                    disabled={updating}
+                  />
+                )}
               </div>
 
               <div className="form-group">
