@@ -9,8 +9,7 @@ const StreamingOnlyWebcamFeed = ({
   streamType = "youtube", 
   isLoading,
   videoRef,
-  iframeRef,
-  onWheel
+  iframeRef
 }) => {
   const iframeRefInternal = useRef(null);
   const finalIframeRef = iframeRef || iframeRefInternal;
@@ -46,7 +45,6 @@ const StreamingOnlyWebcamFeed = ({
   return (
     <div 
       className="webcam-feed"
-      onWheel={onWheel}
       style={{
         transformOrigin: 'center',
         width: '100%',
@@ -66,7 +64,7 @@ const StreamingOnlyWebcamFeed = ({
               allowFullScreen
               style={{ filter: filterStyle }}
             />
-            {zoom > 1 && <div className="stream-overlay" onWheel={onWheel} />}
+            {zoom > 1 && <div className="stream-overlay" />}
           </div>
         ) : streamType === "zoom" ? (
           <div className="stream-wrapper">
@@ -80,7 +78,7 @@ const StreamingOnlyWebcamFeed = ({
               allowFullScreen
               style={{ filter: filterStyle }}
             />
-            {zoom > 1 && <div className="stream-overlay" onWheel={onWheel} />}
+            {zoom > 1 && <div className="stream-overlay" />}
           </div>
         ) : (
           <div className="stream-setup">
