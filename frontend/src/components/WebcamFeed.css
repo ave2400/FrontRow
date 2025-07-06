@@ -69,37 +69,21 @@
   margin-top: 10px;
 }
 
-/* Add these styles to ensure WebcamContainer properly sizes everything */
-.webcam-container {
-  width: 100%;
-  height: 100%;
-  position: relative;
-  overflow: hidden;
-  pointer-events: auto;
-}
-
-.webcam-box {
-  width: 100%;
-  height: 100%;
-  position: relative;
-  overflow: hidden;
+.loading-state {
   display: flex;
   align-items: center;
   justify-content: center;
-  pointer-events: auto;
+  background-color: #333;
+  color: #fff;
 }
 
-/* Ensure the controls don't overlap with the main content */
-.controls-container {
-  position: fixed;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: 10px;
-  z-index: 100;
-  padding: 1px;
-  border-radius: 8px;
+.loading-indicator {
+  text-align: center;
+}
+
+.loading-indicator p {
+  margin: 0;
+  font-size: 16px;
 }
 
 /* Special effects */

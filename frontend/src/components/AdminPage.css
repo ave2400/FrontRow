@@ -1,7 +1,8 @@
 .admin-page {
     padding: 2rem;
-    max-width: 1200px;
-    margin: 0 auto;
+    max-width: 1600px;
+    min-height: 100vh;
+    overflow-y: auto;
   }
   
   .admin-container {
@@ -9,6 +10,7 @@
     border-radius: 8px;
     padding: 2rem;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    min-height: calc(100vh - 4rem);
   }
   
   .admin-container h2 {
