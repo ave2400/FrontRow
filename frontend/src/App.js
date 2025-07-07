@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { PanelGroup, Panel, PanelResizeHandle } from 'react-resizable-panels';
 import { supabase } from './supabaseClient';
 import WebcamContainer from "./components/WebcamContainer";
 import StickyNotes from "./components/StickyNotes";
@@ -19,6 +20,10 @@ function App() {
   const [streams, setStreams] = useState([]);
   const [selectedStreamId, setSelectedStreamId] = useState("");
   const [streamLoading, setStreamLoading] = useState(true);
+  const [panelLayout, setPanelLayout] = useState(() => {
+    const savedLayout = localStorage.getItem('frontrow-panel-layout');
+    return savedLayout ? JSON.parse(savedLayout) : [50, 50]; 
+  });
 
   // Fetch auth session
   useEffect(() => {
@@ -121,6 +126,11 @@ function App() {
     [streams, selectedStreamId]
   );
 
+  const handleLayoutChange = useCallback((layout) => {
+    setPanelLayout(layout);
+    localStorage.setItem('frontrow-panel-layout', JSON.stringify(layout));
+  }, []);
+
   if (loading) {
     return <div className="loading">Loading authentication...</div>;
   }
@@ -149,19 +159,32 @@ function App() {
                     {streamLoading ? (
                       <div className="stream-loading">Loading stream settings...</div>
                     ) : (
-                      <WebcamContainer
-                        onScreenshot={handleScreenshot}
-                        streams={streams}
-                        selectedStreamId={selectedStreamId}
-                        onStreamSelect={handleStreamSelect}
-                        isLoading={false}
-                      />
+                      <PanelGroup 
+                        direction="horizontal" 
+                        className="panel-group"
+                        onLayout={handleLayoutChange}
+                      >
+                        <Panel defaultSize={panelLayout[0]} minSize={20} className="panel">
+                          <WebcamContainer
+                            onScreenshot={handleScreenshot}
+                            streams={streams}
+                            selectedStreamId={selectedStreamId}
+                            onStreamSelect={handleStreamSelect}
+                            isLoading={false}
+                          />
+                        </Panel>
+                        <PanelResizeHandle className="resize-handle" />
+                        <Panel defaultSize={panelLayout[1]} minSize={0} className="panel">
+                          <div className="notes-section">
+                            <StickyNotes
+                              currentNote={currentNote}
+                              setCurrentNote={setCurrentNote}
+                              onScreenshot={handleScreenshot}
+                            />
+                          </div>
+                        </Panel>
+                      </PanelGroup>
                     )}
-                    <StickyNotes
-                      currentNote={currentNote}
-                      setCurrentNote={setCurrentNote}
-                      onScreenshot={handleScreenshot}
-                    />
                     <AIAssistant currentNote={currentNote} />
                   </div>
                 </div>
