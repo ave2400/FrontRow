@@ -1,7 +1,8 @@
-.admin-page {
-    padding: 2rem;
-    max-width: 1200px;
-    margin: 0 auto;
+  .admin-page {
+      padding: 2rem;
+      max-width: 1200px;
+      margin: 0 auto;
+      min-height: 100vh;
   }
   
   .admin-container {
@@ -50,13 +51,31 @@
   }
   
   .form-group {
-    margin-bottom: 1rem;
+    margin-bottom: 1.5rem;
   }
   
   .form-group label {
     display: block;
     margin-bottom: 0.5rem;
     color: #555;
+    font-weight: 500;
+  }
+  
+  .form-group input,
+  .form-group select {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 16px;
+    box-sizing: border-box;
+  }
+  
+  .form-group input:focus,
+  .form-group select:focus {
+    outline: none;
+    border-color: #6c63ff;
+    box-shadow: 0 0 0 2px rgba(108, 99, 255, 0.2);
   }
   
   .input-group {
@@ -197,19 +216,22 @@
     border-collapse: collapse;
     margin-bottom: 1rem;
     font-size: 0.875rem;
+    table-layout: fixed;
   }
   
   .streams-table th,
   .streams-table td {
-    padding: 0.5rem;
+    padding: 0.75rem;
     text-align: left;
     border-bottom: 1px solid #dee2e6;
+    word-wrap: break-word;
   }
   
   .streams-table th {
     background-color: #f8f9fa;
     font-weight: 600;
-    font-size: 0.8rem;
+    font-size: 0.875rem;
+    padding: 1rem 0.75rem;
   }
   
   .streams-table tr:hover {
@@ -217,19 +239,19 @@
   }
   
   .streams-table td:first-child {
-    width: 25%;
+    width: 30%;
   }
   
   .streams-table td:nth-child(2) {
-    width: 20%;
+    width: 15%;
   }
   
   .streams-table td:nth-child(3) {
-    width: 25%;
+    width: 20%;
   }
   
   .streams-table td:last-child {
-    width: 30%;
+    width: 35%;
   }
   
   .btn {
@@ -290,8 +312,8 @@
   .edit-stream-form,
   .new-stream-form {
     background-color: #f8f9fa;
-    padding: 1.5rem;
-    border-radius: 4px;
+    padding: 2rem;
+    border-radius: 8px;
     margin-top: 2rem;
   }
   
@@ -330,5 +352,40 @@
     font-size: 14px;
     margin: 0;
     font-weight: 500;
+  }
+  
+  /* Responsive design */
+  @media (max-width: 768px) {
+    .admin-page {
+      padding: 1rem;
+    }
+    
+    .admin-container {
+      padding: 1rem;
+    }
+    
+    .streams-table {
+      font-size: 0.8rem;
+    }
+    
+    .streams-table th,
+    .streams-table td {
+      padding: 0.5rem 0.25rem;
+    }
+    
+    .edit-stream-form,
+    .new-stream-form {
+      padding: 1rem;
+    }
+  }
+  
+  @media (min-width: 1200px) {
+    .admin-page {
+      max-width: 1600px;
+    }
+    
+    .admin-container {
+      padding: 3rem;
+    }
   }
   
