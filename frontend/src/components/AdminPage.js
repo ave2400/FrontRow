@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, memo } from "react";
 import StreamingOnlyWebcamFeed from './StreamingOnlyWebcamFeed';
 import "./AdminPage.css";
 import { supabase } from '../supabaseClient.js';
@@ -36,24 +36,8 @@ const AdminPage = () => {
           throw new Error(sessionError?.message || 'User not authenticated. Please sign in again.');
         }
 
-        // First check admin status
-        const adminResponse = await fetch(`${API_BASE_URL}/api/users/admin-status`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session.access_token}`
-          },
-          credentials: 'include'
-        });
-
-        if (adminResponse.ok) {
-          const adminData = await adminResponse.json();
-          setAdminStatus(adminData);
-          console.log('Admin status in AdminPage:', adminData);
-        } else {
-          console.error('Admin status check failed:', adminResponse.status);
-          setAdminStatus({ isAdmin: false, error: `Status: ${adminResponse.status}` });
-        }
+        // Set admin status since we know user is admin if they reached this page
+        setAdminStatus({ isAdmin: true });
 
         const response = await fetch(`${API_BASE_URL}/api/streams/all`, {
           method: 'GET',
@@ -689,4 +673,4 @@ const AdminPage = () => {
   );
 };
 
-export default AdminPage;
+export default memo(AdminPage);

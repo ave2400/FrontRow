@@ -19,6 +19,7 @@ const StreamingOnlyWebcamFeed = ({
   const videoRefInternal = useRef(null);
   const finalVideoRef = videoRef || videoRefInternal;
   const peerConnectionRef = useRef(null);
+  const viewerConnectionsRef = useRef(new Map());
   const [stream, setStream] = useState(null);
   const [error, setError] = useState(null);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -121,33 +122,45 @@ const StreamingOnlyWebcamFeed = ({
   const handleViewerJoined = (data) => {
     console.log('Viewer joined:', data.viewerId);
     createPeerConnectionForViewer(data.viewerId);
+    
+    // Send stream-started event to notify viewer that stream is ready
+    socketService.startStream(streamId);
   };
 
   const handleViewerOffer = (data) => {
-    console.log('Received offer from viewer:', data.viewerId);
-    const peerConnection = viewerConnections.get(data.viewerId);
+    console.log('Received offer from viewer:', data.viewerId, 'offer:', data.offer);
+    const peerConnection = viewerConnectionsRef.current.get(data.viewerId);
     if (peerConnection) {
       peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer))
-        .then(() => peerConnection.createAnswer())
+        .then(() => {
+          console.log('Admin set remote description for viewer:', data.viewerId);
+          return peerConnection.createAnswer();
+        })
         .then((answer) => {
+          console.log('Admin created answer for viewer:', data.viewerId, 'answer:', answer);
           peerConnection.setLocalDescription(answer);
           socketService.sendAnswer(answer, data.viewerId);
+          console.log('Admin peer connection state after setting local description:', peerConnection.connectionState);
+          console.log('Admin ICE connection state after setting local description:', peerConnection.iceConnectionState);
         })
         .catch(err => console.error('Error handling viewer offer:', err));
+    } else {
+      console.error('No peer connection found for viewer:', data.viewerId);
     }
   };
 
   const handleViewerIceCandidate = (data) => {
-    console.log('Received ICE candidate from viewer:', data.viewerId);
-    const peerConnection = viewerConnections.get(data.viewerId);
+    console.log('Admin received ICE candidate from viewer:', data.viewerId, data.candidate);
+    const peerConnection = viewerConnectionsRef.current.get(data.viewerId);
     if (peerConnection && data.candidate) {
       peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate))
+        .then(() => console.log('Admin added ICE candidate from viewer:', data.viewerId))
         .catch(err => console.error('Error adding ICE candidate:', err));
     }
   };
 
   const handleStreamStarted = (data) => {
-    console.log('Stream started:', data.streamId);
+    console.log('Stream started event received:', data.streamId);
     connectToStream();
   };
 
@@ -157,17 +170,25 @@ const StreamingOnlyWebcamFeed = ({
   };
 
   const handleAdminAnswer = (data) => {
-    console.log('Received answer from admin');
+    console.log('Received answer from admin:', data.answer);
     if (peerConnectionRef.current) {
       peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(data.answer))
+        .then(() => {
+          console.log('Viewer set remote description from admin');
+          console.log('Viewer peer connection state after setting remote description:', peerConnectionRef.current.connectionState);
+          console.log('Viewer ICE connection state after setting remote description:', peerConnectionRef.current.iceConnectionState);
+        })
         .catch(err => console.error('Error setting remote description:', err));
+    } else {
+      console.error('No peer connection found for viewer');
     }
   };
 
   const handleAdminIceCandidate = (data) => {
-    console.log('Received ICE candidate from admin');
+    console.log('Viewer received ICE candidate from admin:', data.candidate);
     if (peerConnectionRef.current && data.candidate) {
       peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(data.candidate))
+        .then(() => console.log('Viewer added ICE candidate from admin'))
         .catch(err => console.error('Error adding ICE candidate:', err));
     }
   };
@@ -184,21 +205,46 @@ const StreamingOnlyWebcamFeed = ({
       // Create peer connection
       const peerConnection = new RTCPeerConnection({ iceServers });
 
+      // Monitor connection state
+      peerConnection.onconnectionstatechange = () => {
+        console.log('Admin peer connection state changed:', peerConnection.connectionState);
+      };
+
+      peerConnection.oniceconnectionstatechange = () => {
+        console.log('Admin ICE connection state changed:', peerConnection.iceConnectionState);
+      };
+
       // Add local stream tracks
-      if (stream) {
-        stream.getTracks().forEach(track => {
-          peerConnection.addTrack(track, stream);
+      console.log('Adding tracks to peer connection, stream:', stream);
+      let streamToUse = stream;
+      
+      // If stream state is not available, try to get it from the video element
+      if (!streamToUse && finalVideoRef.current && finalVideoRef.current.srcObject) {
+        streamToUse = finalVideoRef.current.srcObject;
+        console.log('Using stream from video element:', streamToUse);
+      }
+      
+      if (streamToUse) {
+        const tracks = streamToUse.getTracks();
+        console.log('Stream tracks:', tracks);
+        tracks.forEach(track => {
+          console.log('Adding track to peer connection:', track.kind);
+          peerConnection.addTrack(track, streamToUse);
         });
+      } else {
+        console.warn('No stream available when creating peer connection for viewer');
       }
 
       // Handle ICE candidates
       peerConnection.onicecandidate = (event) => {
         if (event.candidate) {
+          console.log('Admin sending ICE candidate to viewer:', viewerId, event.candidate);
           socketService.sendIceCandidate(event.candidate, viewerId, true);
         }
       };
 
-      // Store the connection
+      // Store the connection in both ref and state
+      viewerConnectionsRef.current.set(viewerId, peerConnection);
       setViewerConnections(prev => new Map(prev.set(viewerId, peerConnection)));
 
       console.log('Created peer connection for viewer:', viewerId);
@@ -228,6 +274,7 @@ const StreamingOnlyWebcamFeed = ({
   };
 
   const connectToStream = async () => {
+    console.log('connectToStream called - creating peer connection for viewer');
     try {
       // Get user session for authentication
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -252,24 +299,40 @@ const StreamingOnlyWebcamFeed = ({
       // Create peer connection
       peerConnectionRef.current = new RTCPeerConnection({ iceServers });
 
+      // Monitor connection state
+      peerConnectionRef.current.onconnectionstatechange = () => {
+        console.log('Viewer peer connection state changed:', peerConnectionRef.current.connectionState);
+      };
+
+      peerConnectionRef.current.oniceconnectionstatechange = () => {
+        console.log('Viewer ICE connection state changed:', peerConnectionRef.current.iceConnectionState);
+      };
+
       // Handle ICE candidates
       peerConnectionRef.current.onicecandidate = (event) => {
         if (event.candidate) {
+          console.log('Viewer sending ICE candidate to admin:', event.candidate);
           socketService.sendIceCandidate(event.candidate, null, false);
         }
       };
 
       // Handle incoming stream
       peerConnectionRef.current.ontrack = (event) => {
+        console.log('Viewer received track from admin:', event.streams[0]);
         if (finalVideoRef.current) {
           finalVideoRef.current.srcObject = event.streams[0];
+          console.log('Viewer set video srcObject');
         }
       };
 
-      // Create and send offer
-      const offer = await peerConnectionRef.current.createOffer();
+      // Create and send offer with media constraints
+      const offer = await peerConnectionRef.current.createOffer({
+        offerToReceiveAudio: true,
+        offerToReceiveVideo: true
+      });
       await peerConnectionRef.current.setLocalDescription(offer);
 
+      console.log('Viewer sending offer to admin:', offer);
       // Send offer through WebSocket
       socketService.sendOffer(offer, socketService.socket.id);
 
@@ -314,6 +377,7 @@ const StreamingOnlyWebcamFeed = ({
     viewerConnections.forEach(connection => {
       connection.close();
     });
+    viewerConnectionsRef.current.clear();
     setViewerConnections(new Map());
 
     setIsStreaming(false);

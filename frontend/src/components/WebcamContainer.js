@@ -275,7 +275,7 @@ const WebcamContainer = ({ onScreenshot, streams = [], selectedStreamId, onStrea
             zoom={zoom}
             position={position}
             filters={filters}
-            streamId={selectedStream?.stream_id}
+            streamId={selectedStream?.id}
             streamType={selectedStream?.stream_type}
             isLoading={isLoading}
             isAdmin={isAdmin}

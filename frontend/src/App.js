@@ -50,7 +50,11 @@ function App() {
     const checkAdminStatus = async () => {
       if (session?.user) {
         try {
-          setAdminLoading(true);
+          // Only show loading on initial load
+          if (!hasInitiallyLoaded) {
+            setAdminLoading(true);
+          }
+          console.log('Checking admin status for user:', session.user.id);
           const response = await fetch(`${API_BASE_URL}/api/users/admin-status`, {
             headers: {
               'Authorization': `Bearer ${session.access_token}`
@@ -66,6 +70,7 @@ function App() {
           }
           
           const data = await response.json();
+          console.log('Admin status response:', data);
           setIsAdmin(data.isAdmin);
           setAdminLoading(false);
           setHasInitiallyLoaded(true);
@@ -83,9 +88,14 @@ function App() {
       }
     };
 
-    // Check admin status whenever session changes
-    checkAdminStatus();
-  }, [session]);
+    // Check admin status if we haven't loaded or if we need to verify admin status
+    if (!hasInitiallyLoaded || (session?.user && isAdmin === false)) {
+      console.log('Admin status check triggered - hasInitiallyLoaded:', hasInitiallyLoaded, 'isAdmin:', isAdmin);
+      checkAdminStatus();
+    } else {
+      console.log('Admin status check skipped - hasInitiallyLoaded:', hasInitiallyLoaded, 'isAdmin:', isAdmin);
+    }
+  }, [session, hasInitiallyLoaded]);
 
   // Memoize the fetch streams function
   const fetchStreams = useCallback(async () => {
@@ -238,7 +248,7 @@ function App() {
             element={
               session ? (
                 (() => {
-                  console.log('Admin route accessed - hasInitiallyLoaded:', hasInitiallyLoaded, 'adminLoading:', adminLoading, 'isAdmin:', isAdmin);
+                  console.log('Admin route check - hasInitiallyLoaded:', hasInitiallyLoaded, 'adminLoading:', adminLoading, 'isAdmin:', isAdmin);
                   
                   // If still loading initially, show loading
                   if (!hasInitiallyLoaded || adminLoading) {
@@ -269,7 +279,7 @@ function App() {
                             Sign out
                           </button>
                         </header>
-                        <AdminPage />
+                        <AdminPage key="admin-page" />
                       </div>
                     );
                   } else {
