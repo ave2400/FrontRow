@@ -396,20 +396,6 @@ const AdminPage = () => {
       <div className="admin-container">
         <h2>Stream Management</h2>
         
-        {/* Debug section */}
-        <div className="debug-section" style={{ 
-          backgroundColor: '#f8f9fa', 
-          padding: '10px', 
-          marginBottom: '20px', 
-          borderRadius: '4px',
-          border: '1px solid #dee2e6'
-        }}>
-          <h4>Debug Info:</h4>
-          <p><strong>Admin Status:</strong> {adminStatus ? JSON.stringify(adminStatus) : 'Loading...'}</p>
-          <p><strong>Is Admin:</strong> {adminStatus?.isAdmin ? 'Yes' : 'No'}</p>
-          {adminStatus?.error && <p><strong>Error:</strong> {adminStatus.error}</p>}
-        </div>
-        
         {successMessage && <div className="success-message">{successMessage}</div>}
         {errorMessage && <div className="error-message">{errorMessage}</div>}
 
