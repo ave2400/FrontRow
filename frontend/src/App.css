@@ -75,3 +75,53 @@
     transform: rotate(360deg);
   }
 }
+
+/* App Header */
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #dee2e6;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+.app-header h1 {
+  margin: 0;
+  color: #333;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.sign-out-btn:hover {
+  background-color: #c82333 !important;
+}
+
+/* Admin Page Wrapper */
+.admin-page-wrapper {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-page-wrapper .app-header {
+  flex-shrink: 0;
+}
+
+.admin-page-wrapper .admin-page {
+  flex: 1;
+}
+
+/* Header Actions */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.admin-link:hover {
+  background-color: #5a52e0 !important;
+}

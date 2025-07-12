@@ -1,6 +1,7 @@
-import React, { useRef, useEffect, useState, useMemo } from "react";
+import React, { useRef, useEffect, useState, useMemo, useCallback } from "react";
 import "./WebcamFeed.css";
 import { supabase } from '../supabaseClient.js';
+import socketService from '../services/socketService.js';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
@@ -21,8 +22,7 @@ const StreamingOnlyWebcamFeed = ({
   const [stream, setStream] = useState(null);
   const [error, setError] = useState(null);
   const [isStreaming, setIsStreaming] = useState(false);
-  // const iframeRefInternal = useRef(null);
-  // const finalIframeRef = iframeRef || iframeRefInternal;
+  const [viewerConnections, setViewerConnections] = useState(new Map());
 
   const {
     contrast = 100,
@@ -43,6 +43,49 @@ const StreamingOnlyWebcamFeed = ({
     [streamId]
   );
 
+  const setupAdminSignaling = useCallback(() => {
+    if (!streamId) return;
+
+    // Join as admin
+    socketService.joinAsAdmin(streamId);
+
+    // Listen for viewer connections
+    socketService.on('viewer-joined', handleViewerJoined);
+    socketService.on('offer', handleViewerOffer);
+    socketService.on('ice-candidate', handleViewerIceCandidate);
+
+    // Notify that stream has started
+    socketService.startStream(streamId);
+  }, [streamId]);
+
+  const setupViewerSignaling = useCallback(() => {
+    if (!streamId) return;
+
+    // Join as viewer
+    socketService.joinAsViewer(streamId);
+
+    // Listen for stream events
+    socketService.on('stream-started', handleStreamStarted);
+    socketService.on('stream-stopped', handleStreamStopped);
+    socketService.on('answer', handleAdminAnswer);
+    socketService.on('ice-candidate', handleAdminIceCandidate);
+  }, [streamId]);
+
+  const cleanupSignaling = useCallback(() => {
+    if (streamId) {
+      socketService.stopStream(streamId);
+    }
+    
+    // Remove all listeners
+    socketService.off('viewer-joined', handleViewerJoined);
+    socketService.off('offer', handleViewerOffer);
+    socketService.off('ice-candidate', handleViewerIceCandidate);
+    socketService.off('stream-started', handleStreamStarted);
+    socketService.off('stream-stopped', handleStreamStopped);
+    socketService.off('answer', handleAdminAnswer);
+    socketService.off('ice-candidate', handleAdminIceCandidate);
+  }, [streamId]);
+
   useEffect(() => {
     console.log('StreamingOnlyWebcamFeed useEffect:', { isAdmin, streamId, streamType, isStreaming });
     
@@ -50,27 +93,119 @@ const StreamingOnlyWebcamFeed = ({
       // Only start local stream if we have a streamId (meaning stream is active)
       console.log('Starting local stream for admin...');
       startLocalStream();
+      setupAdminSignaling();
     } else if (streamId && streamType !== 'local') {
       // Handle external platforms (YouTube, Zoom)
       console.log('Setting external stream as active...');
       setIsStreaming(true);
     } else if (streamId && streamType === 'local' && !isAdmin) {
       console.log('Connecting to local stream as viewer...');
-      connectToStream();
+      setupViewerSignaling();
     } else {
       // No streamId or stream stopped - stop any active streams
       console.log('No stream active - stopping any existing streams...');
       stopStream();
+      cleanupSignaling();
     }
-  }, [isAdmin, streamId, streamType]);
+  }, [isAdmin, streamId, streamType, setupAdminSignaling, setupViewerSignaling, cleanupSignaling]);
 
   // Cleanup effect to ensure camera is stopped when component unmounts
   useEffect(() => {
     return () => {
       console.log('Component unmounting - cleaning up streams...');
       stopStream();
+      cleanupSignaling();
     };
-  }, []);
+  }, [cleanupSignaling]);
+
+  const handleViewerJoined = (data) => {
+    console.log('Viewer joined:', data.viewerId);
+    createPeerConnectionForViewer(data.viewerId);
+  };
+
+  const handleViewerOffer = (data) => {
+    console.log('Received offer from viewer:', data.viewerId);
+    const peerConnection = viewerConnections.get(data.viewerId);
+    if (peerConnection) {
+      peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer))
+        .then(() => peerConnection.createAnswer())
+        .then((answer) => {
+          peerConnection.setLocalDescription(answer);
+          socketService.sendAnswer(answer, data.viewerId);
+        })
+        .catch(err => console.error('Error handling viewer offer:', err));
+    }
+  };
+
+  const handleViewerIceCandidate = (data) => {
+    console.log('Received ICE candidate from viewer:', data.viewerId);
+    const peerConnection = viewerConnections.get(data.viewerId);
+    if (peerConnection && data.candidate) {
+      peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate))
+        .catch(err => console.error('Error adding ICE candidate:', err));
+    }
+  };
+
+  const handleStreamStarted = (data) => {
+    console.log('Stream started:', data.streamId);
+    connectToStream();
+  };
+
+  const handleStreamStopped = (data) => {
+    console.log('Stream stopped:', data.streamId);
+    stopStream();
+  };
+
+  const handleAdminAnswer = (data) => {
+    console.log('Received answer from admin');
+    if (peerConnectionRef.current) {
+      peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(data.answer))
+        .catch(err => console.error('Error setting remote description:', err));
+    }
+  };
+
+  const handleAdminIceCandidate = (data) => {
+    console.log('Received ICE candidate from admin');
+    if (peerConnectionRef.current && data.candidate) {
+      peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(data.candidate))
+        .catch(err => console.error('Error adding ICE candidate:', err));
+    }
+  };
+
+  const createPeerConnectionForViewer = async (viewerId) => {
+    try {
+      // Get ICE servers
+      const { data: { session } } = await supabase.auth.getSession();
+      const iceResponse = await fetch(`${API_BASE_URL}/api/streams/ice-servers`, {
+        headers: { 'Authorization': `Bearer ${session.access_token}` }
+      });
+      const { iceServers } = await iceResponse.json();
+
+      // Create peer connection
+      const peerConnection = new RTCPeerConnection({ iceServers });
+
+      // Add local stream tracks
+      if (stream) {
+        stream.getTracks().forEach(track => {
+          peerConnection.addTrack(track, stream);
+        });
+      }
+
+      // Handle ICE candidates
+      peerConnection.onicecandidate = (event) => {
+        if (event.candidate) {
+          socketService.sendIceCandidate(event.candidate, viewerId, true);
+        }
+      };
+
+      // Store the connection
+      setViewerConnections(prev => new Map(prev.set(viewerId, peerConnection)));
+
+      console.log('Created peer connection for viewer:', viewerId);
+    } catch (err) {
+      console.error('Error creating peer connection for viewer:', err);
+    }
+  };
 
   const startLocalStream = async () => {
     try {
@@ -120,15 +255,7 @@ const StreamingOnlyWebcamFeed = ({
       // Handle ICE candidates
       peerConnectionRef.current.onicecandidate = (event) => {
         if (event.candidate) {
-          // Send ICE candidate to signaling server
-          fetch(`${API_BASE_URL}/api/streams/${streamId}/ice-candidate`, {
-            method: 'POST',
-            headers: { 
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${session.access_token}`
-            },
-            body: JSON.stringify({ candidate: event.candidate })
-          });
+          socketService.sendIceCandidate(event.candidate, null, false);
         }
       };
 
@@ -143,32 +270,14 @@ const StreamingOnlyWebcamFeed = ({
       const offer = await peerConnectionRef.current.createOffer();
       await peerConnectionRef.current.setLocalDescription(offer);
 
-      const signalResponse = await fetch(`${API_BASE_URL}/api/streams/${streamId}/signal`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
-        },
-        body: JSON.stringify({ signal: offer })
-      });
-
-      if (!signalResponse.ok) {
-        throw new Error(`Signaling failed: ${signalResponse.status}`);
-      }
-
-      const { signal: answer } = await signalResponse.json();
-      
-      if (!answer || !answer.type || !answer.sdp) {
-        throw new Error('Invalid signaling response');
-      }
-      
-      await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(answer));
+      // Send offer through WebSocket
+      socketService.sendOffer(offer, socketService.socket.id);
 
       setIsStreaming(true);
       setError(null);
     } catch (err) {
       console.error('Error connecting to stream:', err);
-      setError('Failed to connect to stream. This feature requires a proper WebRTC signaling server. For now, only the admin can see their camera feed.');
+      setError('Failed to connect to stream. Please try again later.');
     }
   };
 
@@ -195,11 +304,17 @@ const StreamingOnlyWebcamFeed = ({
       setStream(null);
     }
 
-    // Close peer connection
+    // Close peer connections
     if (peerConnectionRef.current) {
       peerConnectionRef.current.close();
       peerConnectionRef.current = null;
     }
+
+    // Close viewer connections
+    viewerConnections.forEach(connection => {
+      connection.close();
+    });
+    setViewerConnections(new Map());
 
     setIsStreaming(false);
     setError(null);
@@ -237,6 +352,7 @@ const StreamingOnlyWebcamFeed = ({
         streamType === "youtube" ? (
           <div className="stream-wrapper">
             <iframe
+              title="YouTube Stream"
               width="100%"
               height="100%"
               src={youtubeUrl}
@@ -250,6 +366,7 @@ const StreamingOnlyWebcamFeed = ({
         ) : streamType === "zoom" ? (
           <div className="stream-wrapper">
             <iframe
+              title="Zoom Meeting"
               width="100%"
               height="100%"
               src={streamId}

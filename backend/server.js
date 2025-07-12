@@ -3,12 +3,19 @@ const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
 const { supabase } = require('./utils/supabaseServerClient');
-
-const assistantService = require('./assistantService');
+const { createClient } = require('@supabase/supabase-js');
 const streamService = require('./streamService');
+const assistantService = require('./assistantService');
 const authMiddleware = require('./middleware/auth');
+const signalingService = require('./signalingService');
+const http = require('http');
 
 const app = express();
+const server = http.createServer(app);
+
+// Initialize WebSocket signaling service
+signalingService.initialize(server);
+
 const port = process.env.PORT || 5000;
 
 // Configure Multer
@@ -321,7 +328,7 @@ async function main() {
     });
 
     // Start the server after everything is initialized
-    app.listen(port, () => {
+    server.listen(port, () => {
       console.log(`Server running on port ${port}`);
     });
 

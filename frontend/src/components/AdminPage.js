@@ -22,6 +22,7 @@ const AdminPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [currentStream, setCurrentStream] = useState(null);
   const [cameraAccessGranted, setCameraAccessGranted] = useState(false);
+  const [adminStatus, setAdminStatus] = useState(null);
 
   // Fetch all streams when component mounts
   useEffect(() => {
@@ -33,6 +34,25 @@ const AdminPage = () => {
         
         if (sessionError || !session) {
           throw new Error(sessionError?.message || 'User not authenticated. Please sign in again.');
+        }
+
+        // First check admin status
+        const adminResponse = await fetch(`${API_BASE_URL}/api/users/admin-status`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`
+          },
+          credentials: 'include'
+        });
+
+        if (adminResponse.ok) {
+          const adminData = await adminResponse.json();
+          setAdminStatus(adminData);
+          console.log('Admin status in AdminPage:', adminData);
+        } else {
+          console.error('Admin status check failed:', adminResponse.status);
+          setAdminStatus({ isAdmin: false, error: `Status: ${adminResponse.status}` });
         }
 
         const response = await fetch(`${API_BASE_URL}/api/streams/all`, {
@@ -391,6 +411,20 @@ const AdminPage = () => {
     <div className="admin-page">
       <div className="admin-container">
         <h2>Stream Management</h2>
+        
+        {/* Debug section */}
+        <div className="debug-section" style={{ 
+          backgroundColor: '#f8f9fa', 
+          padding: '10px', 
+          marginBottom: '20px', 
+          borderRadius: '4px',
+          border: '1px solid #dee2e6'
+        }}>
+          <h4>Debug Info:</h4>
+          <p><strong>Admin Status:</strong> {adminStatus ? JSON.stringify(adminStatus) : 'Loading...'}</p>
+          <p><strong>Is Admin:</strong> {adminStatus?.isAdmin ? 'Yes' : 'No'}</p>
+          {adminStatus?.error && <p><strong>Error:</strong> {adminStatus.error}</p>}
+        </div>
         
         {successMessage && <div className="success-message">{successMessage}</div>}
         {errorMessage && <div className="error-message">{errorMessage}</div>}

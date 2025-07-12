@@ -5,7 +5,7 @@ import ContrastControls from "./Contrast";
 import "./WebcamContainer.css";
 import "../styles/buttons.css";
 
-const WebcamContainer = ({ onScreenshot, streams = [], selectedStreamId, onStreamSelect, isLoading }) => {
+const WebcamContainer = ({ onScreenshot, streams = [], selectedStreamId, onStreamSelect, isLoading, isAdmin }) => {
   const [zoom, setZoom] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -62,7 +62,7 @@ const WebcamContainer = ({ onScreenshot, streams = [], selectedStreamId, onStrea
     });
   };
 
-  const handleWheel = (e) => {
+  const handleWheel = useCallback((e) => {
     e.preventDefault();
     e.stopPropagation();
 
@@ -83,7 +83,7 @@ const WebcamContainer = ({ onScreenshot, streams = [], selectedStreamId, onStrea
       );
       return newPosition;
     });
-  };
+  }, [zoom, clampPosition]);
 
   // Add wheel event listener with passive: false
   useEffect(() => {
@@ -96,7 +96,7 @@ const WebcamContainer = ({ onScreenshot, streams = [], selectedStreamId, onStrea
         container.removeEventListener('wheel', handleWheelEvent);
       };
     }
-  }, [zoom, position]);
+  }, [zoom, position, handleWheel]);
 
   const handleDragStart = (e) => {
     if (zoom <= 1) return;
@@ -278,6 +278,7 @@ const WebcamContainer = ({ onScreenshot, streams = [], selectedStreamId, onStrea
             streamId={selectedStream?.stream_id}
             streamType={selectedStream?.stream_type}
             isLoading={isLoading}
+            isAdmin={isAdmin}
           />
 
           {showFlash && <div className="screenshot-flash" />}

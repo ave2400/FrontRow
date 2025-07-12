@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { supabase } from './supabaseClient';
 import WebcamContainer from "./components/WebcamContainer";
 import StickyNotes from "./components/StickyNotes";
@@ -7,8 +7,6 @@ import AIAssistant from "./components/AIAssistant";
 import SignIn from './components/SignIn';
 import SignUp from './components/SignUp';
 import AdminPage from './components/AdminPage';
-import StreamingOnlyWebcamFeed from './components/StreamingOnlyWebcamFeed';
-// import AdminOnly from './components/AdminOnly';
 import './App.css';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
@@ -17,7 +15,6 @@ function App() {
   const [session, setSession] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminLoading, setAdminLoading] = useState(true);
-  const [currentStream, setCurrentStream] = useState(null);
   const [streamLoading, setStreamLoading] = useState(true);
   const [currentNote, setCurrentNote] = useState({ title: "", content: "", images: [] });
   const [streams, setStreams] = useState([]);
@@ -53,11 +50,7 @@ function App() {
     const checkAdminStatus = async () => {
       if (session?.user) {
         try {
-          // Only show loading on initial load, not when switching tabs
-          if (!hasInitiallyLoaded) {
-            setAdminLoading(true);
-          }
-          console.log('Checking admin status for user:', session.user.id);
+          setAdminLoading(true);
           const response = await fetch(`${API_BASE_URL}/api/users/admin-status`, {
             headers: {
               'Authorization': `Bearer ${session.access_token}`
@@ -73,13 +66,9 @@ function App() {
           }
           
           const data = await response.json();
-          console.log('Admin status response:', data);
           setIsAdmin(data.isAdmin);
           setAdminLoading(false);
-          // Add a small delay to ensure state is properly set
-          setTimeout(() => {
-            setHasInitiallyLoaded(true);
-          }, 100);
+          setHasInitiallyLoaded(true);
         } catch (error) {
           console.error('Error checking admin status:', error);
           setIsAdmin(false);
@@ -94,10 +83,8 @@ function App() {
       }
     };
 
-    // Only check admin status if we haven't already confirmed it for this session
-    if (!hasInitiallyLoaded || (session?.user && !isAdmin)) {
-      checkAdminStatus();
-    }
+    // Check admin status whenever session changes
+    checkAdminStatus();
   }, [session]);
 
   // Memoize the fetch streams function
@@ -137,47 +124,6 @@ function App() {
     return () => clearInterval(pollInterval);
   }, [fetchStreams]);
 
-  // Memoize stream handlers
-  const handleStartStream = useCallback(async () => {
-    if (!session?.user) return;
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/streams/start`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`
-        }
-      });
-      const data = await response.json();
-      if (data.id) {
-        setCurrentStream(data);
-      }
-    } catch (error) {
-      console.error('Error starting stream:', error);
-    }
-  }, [session]);
-
-  const handleStopStream = useCallback(async () => {
-    if (!session?.user) return;
-
-    try {
-      await fetch(`${API_BASE_URL}/api/streams/stop`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`
-        }
-      });
-      setCurrentStream(null);
-    } catch (error) {
-      console.error('Error stopping stream:', error);
-    }
-  }, [session]);
-
-  // Memoize the stream selection handler
-  const handleStreamSelect = useCallback((streamId) => {
-    setSelectedStreamId(streamId);
-  }, []);
-
   // Memoize the screenshot handler
   const handleScreenshot = useCallback((screenshotData) => {
     setCurrentNote(prev => ({
@@ -185,6 +131,16 @@ function App() {
       images: [...prev.images, screenshotData]
     }));
   }, []);
+
+  // Handle sign out
+  const handleSignOut = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
 
   if ((streamLoading || adminLoading) && !hasInitiallyLoaded) {
     return <div className="loading">Loading...</div>;
@@ -198,22 +154,60 @@ function App() {
             path="/"
             element={
               session ? (
-                <div className="main-content">
-                  <WebcamContainer
-                    onScreenshot={handleScreenshot}
-                    streams={streams}
-                    selectedStreamId={selectedStreamId}
-                    onStreamSelect={handleStreamSelect}
-                    isLoading={streamLoading}
-                  />
-                  <div className="sidebar">
-                    <StickyNotes
-                      currentNote={currentNote}
-                      setCurrentNote={setCurrentNote}
+                <>
+                  <header className="app-header">
+                    <h1>FrontRow Notes</h1>
+                    <div className="header-actions">
+                      <Link 
+                        to="/admin" 
+                        className="admin-link"
+                        style={{
+                          backgroundColor: '#6c63ff',
+                          color: 'white',
+                          textDecoration: 'none',
+                          padding: '8px 16px',
+                          borderRadius: '4px',
+                          marginRight: '10px',
+                          fontSize: '14px'
+                        }}
+                      >
+                        Admin Panel
+                      </Link>
+                      <button 
+                        onClick={handleSignOut}
+                        className="sign-out-btn"
+                        style={{
+                          backgroundColor: '#dc3545',
+                          color: 'white',
+                          border: 'none',
+                          padding: '8px 16px',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '14px'
+                        }}
+                      >
+                        Sign out
+                      </button>
+                    </div>
+                  </header>
+                  <div className="main-content">
+                    <WebcamContainer
+                      onScreenshot={handleScreenshot}
+                      streams={streams}
+                      selectedStreamId={selectedStreamId}
+                      onStreamSelect={setSelectedStreamId}
+                      isLoading={streamLoading}
+                      isAdmin={false}
                     />
-                    <AIAssistant />
+                    <div className="sidebar">
+                      <StickyNotes
+                        currentNote={currentNote}
+                        setCurrentNote={setCurrentNote}
+                      />
+                      <AIAssistant />
+                    </div>
                   </div>
-                </div>
+                </>
               ) : (
                 <Navigate to="/signin" replace />
               )
@@ -244,47 +238,42 @@ function App() {
             element={
               session ? (
                 (() => {
-                  console.log('Admin route check:', { 
-                    adminLoading, 
-                    hasInitiallyLoaded, 
-                    isAdmin, 
-                    session: !!session 
-                  });
+                  console.log('Admin route accessed - hasInitiallyLoaded:', hasInitiallyLoaded, 'adminLoading:', adminLoading, 'isAdmin:', isAdmin);
                   
                   // If still loading initially, show loading
-                  if (!hasInitiallyLoaded) {
-                    console.log('Still loading initially, showing loading screen');
+                  if (!hasInitiallyLoaded || adminLoading) {
+                    console.log('Admin route - showing loading');
                     return <div className="loading">Loading...</div>;
-                  }
-                  
-                  // If admin check is still loading, show loading
-                  if (adminLoading) {
-                    console.log('Admin check still loading, showing loading screen');
-                    return <div className="loading">Checking admin status...</div>;
-                  }
-                  
-                  // If we have a session but admin status is still false, wait a bit more
-                  if (session && !isAdmin && hasInitiallyLoaded) {
-                    console.log('Session exists but admin status is false, waiting...');
-                    return <div className="loading">Verifying admin status...</div>;
                   }
                   
                   // If admin status is confirmed, show admin page
                   if (isAdmin) {
-                    console.log('Admin confirmed, rendering AdminPage');
-                    try {
-                      return <AdminPage />;
-                    } catch (error) {
-                      console.error('Error rendering AdminPage:', error);
-                      return (
-                        <div style={{ padding: '20px', background: 'red', color: 'white' }}>
-                          <h1>Error rendering AdminPage</h1>
-                          <p>{error.message}</p>
-                        </div>
-                      );
-                    }
+                    console.log('Admin route - rendering AdminPage');
+                    return (
+                      <div className="admin-page-wrapper">
+                        <header className="app-header">
+                          <h1>FrontRow Notes - Admin</h1>
+                          <button 
+                            onClick={handleSignOut}
+                            className="sign-out-btn"
+                            style={{
+                              backgroundColor: '#dc3545',
+                              color: 'white',
+                              border: 'none',
+                              padding: '8px 16px',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '14px'
+                            }}
+                          >
+                            Sign out
+                          </button>
+                        </header>
+                        <AdminPage />
+                      </div>
+                    );
                   } else {
-                    console.log('Not admin, redirecting to home');
+                    console.log('Admin route - not admin, redirecting');
                     return <Navigate to="/" replace />;
                   }
                 })()
