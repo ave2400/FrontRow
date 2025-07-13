@@ -34,7 +34,7 @@ function AdminOnly({ children }) {
 
   return (
     <>
-      {isAdmin ? children : <div>You do not have permission to view this page.</div>}
+      {isAdmin ? children : <></>}
     </>
   );
 }

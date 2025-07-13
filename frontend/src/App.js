@@ -1,23 +1,33 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
-import { supabase } from './supabaseClient';
+import React, { useState, useEffect, useCallback } from "react";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+  Link,
+} from "react-router-dom";
+import { supabase } from "./supabaseClient";
 import WebcamContainer from "./components/WebcamContainer";
 import StickyNotes from "./components/StickyNotes";
 import AIAssistant from "./components/AIAssistant";
-import SignIn from './components/SignIn';
-import SignUp from './components/SignUp';
-import AdminPage from './components/AdminPage';
-import AdminOnly from './components/AdminOnly';
-import './App.css';
+import SignIn from "./components/SignIn";
+import SignUp from "./components/SignUp";
+import AdminPage from "./components/AdminPage";
+import AdminOnly from "./components/AdminOnly";
+import "./App.css";
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+const API_BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
 function App() {
   const [session, setSession] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminLoading, setAdminLoading] = useState(true);
   const [streamLoading, setStreamLoading] = useState(true);
-  const [currentNote, setCurrentNote] = useState({ title: "", content: "", images: [] });
+  const [currentNote, setCurrentNote] = useState({
+    title: "",
+    content: "",
+    images: [],
+  });
   const [streams, setStreams] = useState([]);
   const [selectedStreamId, setSelectedStreamId] = useState("");
   const [hasInitiallyLoaded, setHasInitiallyLoaded] = useState(false);
@@ -26,7 +36,9 @@ function App() {
   useEffect(() => {
     const getSession = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
         setSession(session);
         setStreamLoading(false);
       } catch (error) {
@@ -37,11 +49,11 @@ function App() {
 
     getSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setSession(session);
-      }
-    );
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
 
     return () => subscription?.unsubscribe?.();
   }, []);
@@ -56,12 +68,15 @@ function App() {
             setAdminLoading(true);
           }
           // console.log('Checking admin status for user:', session.user.id);
-          const response = await fetch(`${API_BASE_URL}/api/users/admin-status`, {
-            headers: {
-              'Authorization': `Bearer ${session.access_token}`
+          const response = await fetch(
+            `${API_BASE_URL}/api/users/admin-status`,
+            {
+              headers: {
+                Authorization: `Bearer ${session.access_token}`,
+              },
             }
-          });
-          
+          );
+
           if (!response.ok) {
             // console.error('Admin status check failed:', response.status, response.statusText);
             setIsAdmin(false);
@@ -69,7 +84,7 @@ function App() {
             setHasInitiallyLoaded(true);
             return;
           }
-          
+
           const data = await response.json();
           // console.log('Admin status response:', data);
           setIsAdmin(data.isAdmin);
@@ -101,24 +116,27 @@ function App() {
   // Memoize the fetch streams function
   const fetchStreams = useCallback(async () => {
     try {
-      const { data: { session: currentAuthSession } } = await supabase.auth.getSession();
+      const {
+        data: { session: currentAuthSession },
+      } = await supabase.auth.getSession();
       const headers = {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         ...(currentAuthSession?.access_token && {
-          'Authorization': `Bearer ${currentAuthSession.access_token}`
-        })
+          Authorization: `Bearer ${currentAuthSession.access_token}`,
+        }),
       };
 
       const response = await fetch(`${API_BASE_URL}/api/streams`, {
-        method: 'GET', 
+        method: "GET",
         headers,
-        credentials: 'include'
+        credentials: "include",
       });
 
-      if (!response.ok) throw new Error(`Failed to fetch streams, status: ${response.status}`);
+      if (!response.ok)
+        throw new Error(`Failed to fetch streams, status: ${response.status}`);
       const streamsData = await response.json();
       setStreams(streamsData);
-      
+
       // If no stream is selected and we have streams, select the first one
       if (!selectedStreamId && streamsData.length > 0) {
         setSelectedStreamId(streamsData[0].id);
@@ -137,9 +155,9 @@ function App() {
 
   // Memoize the screenshot handler
   const handleScreenshot = useCallback((screenshotData) => {
-    setCurrentNote(prev => ({
+    setCurrentNote((prev) => ({
       ...prev,
-      images: [...prev.images, screenshotData]
+      images: [...prev.images, screenshotData],
     }));
   }, []);
 
@@ -149,7 +167,7 @@ function App() {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
     } catch (error) {
-      console.error('Error signing out:', error);
+      console.error("Error signing out:", error);
     }
   };
 
@@ -169,32 +187,34 @@ function App() {
                   <header className="app-header">
                     <h1>FrontRow Notes</h1>
                     <div className="header-actions">
-                      <Link 
-                        to="/admin" 
-                        className="admin-link"
-                        style={{
-                          backgroundColor: '#6c63ff',
-                          color: 'white',
-                          textDecoration: 'none',
-                          padding: '8px 16px',
-                          borderRadius: '4px',
-                          marginRight: '10px',
-                          fontSize: '14px'
-                        }}
-                      >
-                        Admin Panel
-                      </Link>
-                      <button 
+                      <AdminOnly>
+                        <Link
+                          to="/admin"
+                          className="admin-link"
+                          style={{
+                            backgroundColor: "#6c63ff",
+                            color: "white",
+                            textDecoration: "none",
+                            padding: "8px 16px",
+                            borderRadius: "4px",
+                            marginRight: "10px",
+                            fontSize: "14px",
+                          }}
+                        >
+                          Admin Panel
+                        </Link>
+                      </AdminOnly>
+                      <button
                         onClick={handleSignOut}
                         className="sign-out-btn"
                         style={{
-                          backgroundColor: '#dc3545',
-                          color: 'white',
-                          border: 'none',
-                          padding: '8px 16px',
-                          borderRadius: '4px',
-                          cursor: 'pointer',
-                          fontSize: '14px'
+                          backgroundColor: "#dc3545",
+                          color: "white",
+                          border: "none",
+                          padding: "8px 16px",
+                          borderRadius: "4px",
+                          cursor: "pointer",
+                          fontSize: "14px",
                         }}
                       >
                         Sign out
@@ -226,23 +246,11 @@ function App() {
           />
           <Route
             path="/signin"
-            element={
-              !session ? (
-                <SignIn />
-              ) : (
-                <Navigate to="/" replace />
-              )
-            }
+            element={!session ? <SignIn /> : <Navigate to="/" replace />}
           />
           <Route
             path="/signup"
-            element={
-              !session ? (
-                <SignUp />
-              ) : (
-                <Navigate to="/" replace />
-              )
-            }
+            element={!session ? <SignUp /> : <Navigate to="/" replace />}
           />
           <Route
             path="/admin"
@@ -254,8 +262,6 @@ function App() {
           />
         </Routes>
       </Router>
-      
-
     </div>
   );
 }
