@@ -15,7 +15,25 @@ const StickyNotes = ({ currentNote, setCurrentNote, onScreenshot }) => {
 
   useEffect(() => {
     loadNotes();
-  }, []);
+    const persistedNote = localStorage.getItem('currentNote');
+    if (persistedNote) {
+      try {
+        const parsedNote = JSON.parse(persistedNote);
+        setCurrentNote(parsedNote);
+      } catch (error) {
+        console.error('Error parsing persisted note:', error);
+        localStorage.removeItem('currentNote');
+      }
+    }
+  }, [setCurrentNote]);
+
+  useEffect(() => {
+    if (currentNote.title || currentNote.content || (currentNote.images && currentNote.images.length > 0)) {
+      localStorage.setItem('currentNote', JSON.stringify(currentNote));
+    } else {
+      localStorage.removeItem('currentNote');
+    }
+  }, [currentNote]);
 
   // Handle screenshot from WebcamContainer
   useEffect(() => {
@@ -58,6 +76,7 @@ const StickyNotes = ({ currentNote, setCurrentNote, onScreenshot }) => {
         const newNote = await createNote(currentNote);
         setNotes([...notes, newNote]);
         setCurrentNote({ title: "", content: "", images: [] });
+        localStorage.removeItem('currentNote');
       } catch (error) {
         console.error('Error adding note:', error);
       } finally {
