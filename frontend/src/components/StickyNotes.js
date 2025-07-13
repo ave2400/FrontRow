@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import "./StickyNotes.css";
 import "../styles/buttons.css";
-import { getNotes, createNote, deleteNote } from "../noteService";
+import { getNotes, createNote, deleteNote, uploadImage, updateNote } from "../noteService";
 
 const StickyNotes = ({ currentNote, setCurrentNote, onScreenshot }) => {
   const [notes, setNotes] = useState([]);
@@ -15,24 +15,59 @@ const StickyNotes = ({ currentNote, setCurrentNote, onScreenshot }) => {
 
   useEffect(() => {
     loadNotes();
-    const persistedNote = localStorage.getItem('currentNote');
-    if (persistedNote) {
-      try {
-        const parsedNote = JSON.parse(persistedNote);
-        setCurrentNote(parsedNote);
-      } catch (error) {
-        console.error('Error parsing persisted note:', error);
-        localStorage.removeItem('currentNote');
+    const loadPersistedNote = async () => {
+      const persistedNote = localStorage.getItem('currentNote');
+      if (persistedNote) {
+        try {
+          const parsedNote = JSON.parse(persistedNote);
+          if (parsedNote.images && parsedNote.images.length > 0) {
+            const convertedImages = await Promise.all(
+              parsedNote.images.map(async (imageData) => {
+                if (typeof imageData === 'string' && imageData.startsWith('data:')) {
+                  const response = await fetch(imageData);
+                  return await response.blob();
+                }
+                return imageData;
+              })
+            );
+            parsedNote.images = convertedImages;
+          }
+          setCurrentNote(parsedNote);
+        } catch (error) {
+          console.error('Error parsing persisted note:', error);
+          localStorage.removeItem('currentNote');
+        }
       }
-    }
+    };
+    
+    loadPersistedNote();
   }, [setCurrentNote]);
 
   useEffect(() => {
-    if (currentNote.title || currentNote.content || (currentNote.images && currentNote.images.length > 0)) {
-      localStorage.setItem('currentNote', JSON.stringify(currentNote));
-    } else {
-      localStorage.removeItem('currentNote');
-    }
+    const saveToLocalStorage = async () => {
+      if (currentNote.title || currentNote.content || (currentNote.images && currentNote.images.length > 0)) {
+        const noteForStorage = {
+          ...currentNote,
+          images: currentNote.images ? await Promise.all(
+            currentNote.images.map(async (image) => {
+              if (image instanceof Blob) {
+                return new Promise((resolve) => {
+                  const reader = new FileReader();
+                  reader.onloadend = () => resolve(reader.result);
+                  reader.readAsDataURL(image);
+                });
+              }
+              return image;
+            })
+          ) : []
+        };
+        localStorage.setItem('currentNote', JSON.stringify(noteForStorage));
+      } else {
+        localStorage.removeItem('currentNote');
+      }
+    };
+    
+    saveToLocalStorage();
   }, [currentNote]);
 
   // Handle screenshot from WebcamContainer
@@ -73,8 +108,35 @@ const StickyNotes = ({ currentNote, setCurrentNote, onScreenshot }) => {
     if (currentNote.title.trim() && currentNote.content.trim()) {
       setLoading(true);
       try {
-        const newNote = await createNote(currentNote);
-        setNotes([...notes, newNote]);
+        const noteData = {
+          title: currentNote.title,
+          content: currentNote.content,
+          image_urls: []
+        };
+        
+        const newNote = await createNote(noteData);
+        
+        if (currentNote.images && currentNote.images.length > 0) {
+          const uploadedUrls = [];
+          for (const image of currentNote.images) {
+            try {
+              const imageUrl = await uploadImage(image, newNote.id);
+              uploadedUrls.push(imageUrl);
+            } catch (error) {
+              console.error('Error uploading image:', error);
+            }
+          }
+          
+          if (uploadedUrls.length > 0) {
+            const updatedNote = await updateNote(newNote.id, { image_urls: uploadedUrls });
+            setNotes([...notes, updatedNote]);
+          } else {
+            setNotes([...notes, newNote]);
+          }
+        } else {
+          setNotes([...notes, newNote]);
+        }
+        
         setCurrentNote({ title: "", content: "", images: [] });
         localStorage.removeItem('currentNote');
       } catch (error) {
