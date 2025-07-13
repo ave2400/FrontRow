@@ -9,10 +9,19 @@ class SignalingService {
   }
 
   initialize(server) {
+    const allowedOrigins = ['http://localhost:3000', 'https://frontrow-frontend.vercel.app'];
+    
     this.io = new Server(server, {
       cors: {
-        origin: process.env.FRONTEND_URL || "http://localhost:3000",
-        methods: ["GET", "POST"]
+        origin: function (origin, callback) {
+          if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+          } else {
+            callback(new Error('Not allowed by CORS'));
+          }
+        },
+        methods: ["GET", "POST"],
+        credentials: true
       }
     });
 

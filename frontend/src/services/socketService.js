@@ -12,7 +12,8 @@ class SocketService {
       return this.socket;
     }
 
-    const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+    const API_BASE_URL = process.env.REACT_APP_API_URL || 
+      (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://frontrow-backend.vercel.app');
     this.socket = io(API_BASE_URL);
 
     this.socket.on('connect', () => {
