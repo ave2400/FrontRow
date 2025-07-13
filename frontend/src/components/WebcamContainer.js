@@ -220,6 +220,40 @@ const WebcamContainer = ({ onScreenshot, streams = [], selectedStreamId, onStrea
 
   return (
     <div className="webcam-container-wrapper">
+      {/* Controls section at the top */}
+      <div className="top-controls">
+        {streams.length > 0 && (
+          <div className="stream-selector">
+            <select
+              value={selectedStreamId || ''}
+              onChange={(e) => onStreamSelect(e.target.value)}
+              className="stream-select"
+            >
+              <option value="">Select a stream</option>
+              {streams.map(stream => (
+                <option key={stream.id} value={stream.id}>
+                  {stream.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        <div className="controls-container">
+          <ZoomControls zoomIn={zoomIn} zoomOut={zoomOut} />
+          <ContrastControls onFilterChange={handleFilterChange} />
+          <button
+            onClick={takeScreenshot}
+            className="btn btn-icon"
+            title="Take Screenshot"
+            disabled={isCapturing}
+          >
+            {isCapturing ? '⏳' : '📸'}
+          </button>
+        </div>
+      </div>
+
+      {/* Webcam container */}
       <div
         ref={containerRef}
         className="webcam-container"
@@ -228,10 +262,11 @@ const WebcamContainer = ({ onScreenshot, streams = [], selectedStreamId, onStrea
         onMouseLeave={handleDragEnd}
         onTouchMove={handleDrag}
         onTouchEnd={handleDragEnd}
+        onWheel={handleWheel}
         style={{ cursor: zoom > 1 ? 'grab' : 'default' }}
       >
         <div
-          className="webcam-box"
+          className={`webcam-box ${zoom > 1 ? 'zoomed' : ''}`}
           onMouseDown={handleDragStart}
           onTouchStart={handleDragStart}
           style={{
@@ -241,36 +276,6 @@ const WebcamContainer = ({ onScreenshot, streams = [], selectedStreamId, onStrea
             transition: isDragging ? 'none' : 'transform 0.1s ease-out'
           }}
         >
-          {streams.length > 0 && (
-            <div className="stream-selector">
-              <select
-                value={selectedStreamId || ''}
-                onChange={(e) => onStreamSelect(e.target.value)}
-                className="stream-select"
-              >
-                <option value="">Select a stream</option>
-                {streams.map(stream => (
-                  <option key={stream.id} value={stream.id}>
-                    {stream.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          <div className="controls-container">
-            <ZoomControls zoomIn={zoomIn} zoomOut={zoomOut} />
-            <ContrastControls onFilterChange={handleFilterChange} />
-            <button
-              onClick={takeScreenshot}
-              className="btn btn-icon"
-              title="Take Screenshot"
-              disabled={isCapturing}
-            >
-              {isCapturing ? '⏳' : '📸'}
-            </button>
-          </div>
-
           <StreamingOnlyWebcamFeed
             zoom={zoom}
             position={position}
@@ -289,8 +294,6 @@ const WebcamContainer = ({ onScreenshot, streams = [], selectedStreamId, onStrea
           )}
         </div>
       </div>
-
-
     </div>
   );
 };

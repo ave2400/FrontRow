@@ -405,7 +405,6 @@ const StreamingOnlyWebcamFeed = ({
   return (
     <div 
       className="webcam-feed"
-      onWheel={onWheel}
       style={{
         transformOrigin: 'center',
         width: '100%',
@@ -425,7 +424,7 @@ const StreamingOnlyWebcamFeed = ({
               allowFullScreen
               style={{ filter: filterStyle }}
             />
-            {zoom > 1 && <div className="stream-overlay" onWheel={onWheel} />}
+            {zoom > 1 && <div className="stream-overlay" />}
           </div>
         ) : streamType === "zoom" ? (
           <div className="stream-wrapper">
@@ -438,6 +437,21 @@ const StreamingOnlyWebcamFeed = ({
               allow="microphone; camera; autoplay; fullscreen; display-capture"
               allowFullScreen
               style={{ filter: filterStyle }}
+            />
+            {zoom > 1 && <div className="stream-overlay"  onWheel={onWheel}  />}
+          </div>
+        ) : streamType === "local" ? (
+          <div className="stream-wrapper">
+            <video
+              ref={finalVideoRef}
+              autoPlay
+              playsInline
+              muted={isAdmin}
+              style={{ 
+                width: '100%',
+                height: '100%',
+                filter: filterStyle
+              }}
             />
             {zoom > 1 && <div className="stream-overlay" onWheel={onWheel} />}
           </div>
@@ -470,4 +484,4 @@ const StreamingOnlyWebcamFeed = ({
   );
 };
 
-export default StreamingOnlyWebcamFeed;
+export default React.memo(StreamingOnlyWebcamFeed);

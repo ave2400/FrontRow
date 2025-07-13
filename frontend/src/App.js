@@ -7,6 +7,7 @@ import AIAssistant from "./components/AIAssistant";
 import SignIn from './components/SignIn';
 import SignUp from './components/SignUp';
 import AdminPage from './components/AdminPage';
+import AdminOnly from './components/AdminOnly';
 import './App.css';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
@@ -246,50 +247,9 @@ function App() {
           <Route
             path="/admin"
             element={
-              session ? (
-                (() => {
-                  console.log('Admin route check - hasInitiallyLoaded:', hasInitiallyLoaded, 'adminLoading:', adminLoading, 'isAdmin:', isAdmin);
-                  
-                  // If still loading initially, show loading
-                  if (!hasInitiallyLoaded || adminLoading) {
-                    console.log('Admin route - showing loading');
-                    return <div className="loading">Loading...</div>;
-                  }
-                  
-                  // If admin status is confirmed, show admin page
-                  if (isAdmin) {
-                    console.log('Admin route - rendering AdminPage');
-                    return (
-                      <div className="admin-page-wrapper">
-                        <header className="app-header">
-                          <h1>FrontRow Notes - Admin</h1>
-                          <button 
-                            onClick={handleSignOut}
-                            className="sign-out-btn"
-                            style={{
-                              backgroundColor: '#dc3545',
-                              color: 'white',
-                              border: 'none',
-                              padding: '8px 16px',
-                              borderRadius: '4px',
-                              cursor: 'pointer',
-                              fontSize: '14px'
-                            }}
-                          >
-                            Sign out
-                          </button>
-                        </header>
-                        <AdminPage key="admin-page" />
-                      </div>
-                    );
-                  } else {
-                    console.log('Admin route - not admin, redirecting');
-                    return <Navigate to="/" replace />;
-                  }
-                })()
-              ) : (
-                <Navigate to="/signin" replace />
-              )
+              <AdminOnly>
+                <AdminPage />
+              </AdminOnly>
             }
           />
         </Routes>

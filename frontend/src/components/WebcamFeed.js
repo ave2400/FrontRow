@@ -53,12 +53,7 @@ const WebcamFeed = ({ zoom, position, filters, videoRef }) => {
   };
 
   return (
-    <div 
-      className="webcam-feed"
-      style={{
-        transform: `translate(${position?.x || 0}px, ${position?.y || 0}px)`
-      }}
-    >
+    <div className="webcam-feed">
       {!isStreaming ? (
         // Regular webcam feed
         <video 
