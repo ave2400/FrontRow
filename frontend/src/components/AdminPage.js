@@ -6,7 +6,7 @@ import { supabase } from "../supabaseClient.js";
 const API_BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
 const AdminPage = () => {
-  console.log("AdminPage component is mounting...");
+  // console.log("AdminPage component is mounting...");
 
   const [streamList, setStreamList] = useState([]);
   const [newStream, setNewStream] = useState({
@@ -26,7 +26,7 @@ const AdminPage = () => {
 
   // Fetch all streams when component mounts
   useEffect(() => {
-    console.log("AdminPage useEffect running - fetching streams...");
+    // console.log("AdminPage useEffect running - fetching streams...");
     const fetchAllStreams = async () => {
       try {
         setIsLoading(true);

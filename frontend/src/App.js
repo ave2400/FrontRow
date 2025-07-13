@@ -55,7 +55,7 @@ function App() {
           if (!hasInitiallyLoaded) {
             setAdminLoading(true);
           }
-          console.log('Checking admin status for user:', session.user.id);
+          // console.log('Checking admin status for user:', session.user.id);
           const response = await fetch(`${API_BASE_URL}/api/users/admin-status`, {
             headers: {
               'Authorization': `Bearer ${session.access_token}`
@@ -63,7 +63,7 @@ function App() {
           });
           
           if (!response.ok) {
-            console.error('Admin status check failed:', response.status, response.statusText);
+            // console.error('Admin status check failed:', response.status, response.statusText);
             setIsAdmin(false);
             setAdminLoading(false);
             setHasInitiallyLoaded(true);
@@ -71,12 +71,12 @@ function App() {
           }
           
           const data = await response.json();
-          console.log('Admin status response:', data);
+          // console.log('Admin status response:', data);
           setIsAdmin(data.isAdmin);
           setAdminLoading(false);
           setHasInitiallyLoaded(true);
         } catch (error) {
-          console.error('Error checking admin status:', error);
+          // console.error('Error checking admin status:', error);
           setIsAdmin(false);
           setAdminLoading(false);
           setHasInitiallyLoaded(true);
@@ -91,10 +91,10 @@ function App() {
 
     // Check admin status if we haven't loaded or if we need to verify admin status
     if (!hasInitiallyLoaded || (session?.user && isAdmin === false)) {
-      console.log('Admin status check triggered - hasInitiallyLoaded:', hasInitiallyLoaded, 'isAdmin:', isAdmin);
+      // console.log('Admin status check triggered - hasInitiallyLoaded:', hasInitiallyLoaded, 'isAdmin:', isAdmin);
       checkAdminStatus();
     } else {
-      console.log('Admin status check skipped - hasInitiallyLoaded:', hasInitiallyLoaded, 'isAdmin:', isAdmin);
+      // console.log('Admin status check skipped - hasInitiallyLoaded:', hasInitiallyLoaded, 'isAdmin:', isAdmin);
     }
   }, [session, hasInitiallyLoaded]);
 

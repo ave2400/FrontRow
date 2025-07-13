@@ -67,13 +67,13 @@ const streamService = {
    */
   async isUserAdmin(userId) {
     try {
-      console.log('Checking admin status for user ID:', userId);
+      // console.log('Checking admin status for user ID:', userId);
       
       // Get user's role claim
       const { data, error } = await supabase.auth.admin.getUserById(userId);
       
       if (error) {
-        console.error('Error checking admin status:', error);
+        // console.error('Error checking admin status:', error);
         return false;
       }
 
@@ -88,7 +88,7 @@ const streamService = {
       
       return isAdmin;
     } catch (err) {
-      console.error('Unexpected error checking admin status:', err);
+      // console.error('Unexpected error checking admin status:', err);
       return false;
     }
   },
@@ -136,7 +136,7 @@ const streamService = {
         return null;
       }
 
-      console.log('Stream started successfully:', data);
+      // console.log('Stream started successfully:', data);
       return data;
     } catch (err) {
       console.error('Unexpected error starting stream:', err);

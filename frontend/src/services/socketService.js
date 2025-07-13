@@ -16,17 +16,17 @@ class SocketService {
     this.socket = io(API_BASE_URL);
 
     this.socket.on('connect', () => {
-      console.log('Connected to signaling server');
+      // console.log('Connected to signaling server');
       this.isConnected = true;
     });
 
     this.socket.on('disconnect', () => {
-      console.log('Disconnected from signaling server');
+      // console.log('Disconnected from signaling server');
       this.isConnected = false;
     });
 
     this.socket.on('connect_error', (error) => {
-      console.error('Connection error:', error);
+      // console.error('Connection error:', error);
       this.isConnected = false;
     });
 
