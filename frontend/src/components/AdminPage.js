@@ -1,45 +1,63 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, memo } from "react";
+import StreamingOnlyWebcamFeed from "./StreamingOnlyWebcamFeed";
 import "./AdminPage.css";
-import { supabase } from '../supabaseClient.js';
+import { supabase } from "../supabaseClient.js";
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+const API_BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
 const AdminPage = () => {
+  // console.log("AdminPage component is mounting...");
+
   const [streamList, setStreamList] = useState([]);
   const [newStream, setNewStream] = useState({
-    name: '',
-    streamId: '',
-    streamType: 'youtube',
-    isActive: false
+    name: "",
+    streamId: "",
+    streamType: "youtube",
+    isActive: false,
   });
   const [editingStream, setEditingStream] = useState(null);
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [updating, setUpdating] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [currentStream, setCurrentStream] = useState(null);
+  const [cameraAccessGranted, setCameraAccessGranted] = useState(false);
+  const [adminStatus, setAdminStatus] = useState(null);
 
   // Fetch all streams when component mounts
   useEffect(() => {
+    // console.log("AdminPage useEffect running - fetching streams...");
     const fetchAllStreams = async () => {
       try {
         setIsLoading(true);
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        
+        const {
+          data: { session },
+          error: sessionError,
+        } = await supabase.auth.getSession();
+
         if (sessionError || !session) {
-          throw new Error(sessionError?.message || 'User not authenticated. Please sign in again.');
+          throw new Error(
+            sessionError?.message ||
+              "User not authenticated. Please sign in again."
+          );
         }
 
+        // Set admin status since we know user is admin if they reached this page
+        setAdminStatus({ isAdmin: true });
+
         const response = await fetch(`${API_BASE_URL}/api/streams/all`, {
-          method: 'GET',
+          method: "GET",
           headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session.access_token}`
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
           },
-          credentials: 'include'
+          credentials: "include",
         });
 
         if (!response.ok) {
-          throw new Error(`Failed to fetch streams, status: ${response.status}`);
+          throw new Error(
+            `Failed to fetch streams, status: ${response.status}`
+          );
         }
 
         const streamsData = await response.json();
@@ -55,20 +73,51 @@ const AdminPage = () => {
     fetchAllStreams();
   }, []);
 
+  // Handle sign out
+  const handleSignOut = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
+
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setNewStream(prev => ({
+    setNewStream((prev) => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: type === "checkbox" ? checked : value,
     }));
   };
 
   const handleEditInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setEditingStream(prev => ({
+    setEditingStream((prev) => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: type === "checkbox" ? checked : value,
     }));
+  };
+
+  const handleRequestCameraAccess = async () => {
+    try {
+      const mediaStream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true,
+      });
+
+      // Stop the stream immediately after testing access
+      mediaStream.getTracks().forEach((track) => track.stop());
+
+      setCameraAccessGranted(true);
+      setSuccessMessage("Camera and microphone access granted!");
+      setTimeout(() => setSuccessMessage(""), 3000);
+    } catch (err) {
+      console.error("Error accessing media devices:", err);
+      setErrorMessage(
+        "Failed to access camera and microphone. Please ensure you have granted the necessary permissions."
+      );
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -79,22 +128,37 @@ const AdminPage = () => {
       setErrorMessage("");
       setUpdating(true);
 
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
 
       if (sessionError || !session) {
-        throw new Error(sessionError?.message || 'User not authenticated. Please sign in again.');
+        throw new Error(
+          sessionError?.message ||
+            "User not authenticated. Please sign in again."
+        );
       }
 
       const accessToken = session.access_token;
 
+      // For local streams, we don't need a streamId
+      const streamData = {
+        ...newStream,
+        streamId:
+          newStream.streamType === "local"
+            ? "local-stream"
+            : newStream.streamId,
+      };
+
       const response = await fetch(`${API_BASE_URL}/api/streams`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
         },
-        credentials: 'include',
-        body: JSON.stringify(newStream)
+        credentials: "include",
+        body: JSON.stringify(streamData),
       });
 
       if (!response.ok) {
@@ -111,12 +175,12 @@ const AdminPage = () => {
       }
 
       const createdStream = await response.json();
-      setStreamList(prev => [...prev, createdStream]);
+      setStreamList((prev) => [...prev, createdStream]);
       setNewStream({
-        name: '',
-        streamId: '',
-        streamType: 'youtube',
-        isActive: false
+        name: "",
+        streamId: "",
+        streamType: "youtube",
+        isActive: false,
       });
       setSuccessMessage("Stream created successfully!");
       setTimeout(() => setSuccessMessage(""), 3000);
@@ -136,23 +200,41 @@ const AdminPage = () => {
       setErrorMessage("");
       setUpdating(true);
 
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
 
       if (sessionError || !session) {
-        throw new Error(sessionError?.message || 'User not authenticated. Please sign in again.');
+        throw new Error(
+          sessionError?.message ||
+            "User not authenticated. Please sign in again."
+        );
       }
 
       const accessToken = session.access_token;
 
-      const response = await fetch(`${API_BASE_URL}/api/streams/${editingStream.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`
-        },
-        credentials: 'include',
-        body: JSON.stringify(editingStream)
-      });
+      // For local streams, we don't need a streamId
+      const streamData = {
+        ...editingStream,
+        streamId:
+          editingStream.stream_type === "local"
+            ? "local-stream"
+            : editingStream.stream_id,
+      };
+
+      const response = await fetch(
+        `${API_BASE_URL}/api/streams/${editingStream.id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          credentials: "include",
+          body: JSON.stringify(streamData),
+        }
+      );
 
       if (!response.ok) {
         let errorDetails = `Failed to update stream. Status: ${response.status}`;
@@ -167,7 +249,9 @@ const AdminPage = () => {
         throw new Error(errorDetails);
       }
 
-      setStreamList(prev => prev.map(s => s.id === editingStream.id ? editingStream : s));
+      setStreamList((prev) =>
+        prev.map((s) => (s.id === editingStream.id ? editingStream : s))
+      );
       setEditingStream(null);
       setSuccessMessage("Stream updated successfully!");
       setTimeout(() => setSuccessMessage(""), 3000);
@@ -180,7 +264,7 @@ const AdminPage = () => {
   };
 
   const handleDelete = async (streamId) => {
-    if (!window.confirm('Are you sure you want to delete this stream?')) {
+    if (!window.confirm("Are you sure you want to delete this stream?")) {
       return;
     }
 
@@ -189,21 +273,27 @@ const AdminPage = () => {
       setErrorMessage("");
       setUpdating(true);
 
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
 
       if (sessionError || !session) {
-        throw new Error(sessionError?.message || 'User not authenticated. Please sign in again.');
+        throw new Error(
+          sessionError?.message ||
+            "User not authenticated. Please sign in again."
+        );
       }
 
       const accessToken = session.access_token;
 
       const response = await fetch(`${API_BASE_URL}/api/streams/${streamId}`, {
-        method: 'DELETE',
+        method: "DELETE",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
         },
-        credentials: 'include'
+        credentials: "include",
       });
 
       if (!response.ok) {
@@ -219,7 +309,7 @@ const AdminPage = () => {
         throw new Error(errorDetails);
       }
 
-      setStreamList(prev => prev.filter(s => s.id !== streamId));
+      setStreamList((prev) => prev.filter((s) => s.id !== streamId));
       setSuccessMessage("Stream deleted successfully!");
       setTimeout(() => setSuccessMessage(""), 3000);
     } catch (error) {
@@ -236,23 +326,32 @@ const AdminPage = () => {
       setErrorMessage("");
       setUpdating(true);
 
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
 
       if (sessionError || !session) {
-        throw new Error(sessionError?.message || 'User not authenticated. Please sign in again.');
+        throw new Error(
+          sessionError?.message ||
+            "User not authenticated. Please sign in again."
+        );
       }
 
       const accessToken = session.access_token;
 
-      const response = await fetch(`${API_BASE_URL}/api/streams/${streamId}/toggle`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`
-        },
-        credentials: 'include',
-        body: JSON.stringify({ isActive: !currentStatus })
-      });
+      const response = await fetch(
+        `${API_BASE_URL}/api/streams/${streamId}/toggle`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          credentials: "include",
+          body: JSON.stringify({ isActive: !currentStatus }),
+        }
+      );
 
       if (!response.ok) {
         let errorDetails = `Failed to toggle stream status. Status: ${response.status}`;
@@ -267,9 +366,11 @@ const AdminPage = () => {
         throw new Error(errorDetails);
       }
 
-      setStreamList(prev => prev.map(s => 
-        s.id === streamId ? { ...s, is_active: !currentStatus } : s
-      ));
+      setStreamList((prev) =>
+        prev.map((s) =>
+          s.id === streamId ? { ...s, is_active: !currentStatus } : s
+        )
+      );
       setSuccessMessage("Stream status updated successfully!");
       setTimeout(() => setSuccessMessage(""), 3000);
     } catch (error) {
@@ -277,6 +378,73 @@ const AdminPage = () => {
       setErrorMessage(error.message || "An error occurred. Please try again.");
     } finally {
       setUpdating(false);
+    }
+  };
+
+  const handleStartStream = async () => {
+    try {
+      setErrorMessage("");
+      setSuccessMessage("");
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const response = await fetch(`${API_BASE_URL}/api/streams/start`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(
+          errorData.error || `Failed to start stream: ${response.status}`
+        );
+      }
+
+      const data = await response.json();
+      if (data.id) {
+        setCurrentStream(data);
+        setSuccessMessage("Stream started successfully!");
+        setTimeout(() => setSuccessMessage(""), 3000);
+      }
+    } catch (error) {
+      console.error("Error starting stream:", error);
+      setErrorMessage(error.message || "Failed to start stream");
+      setTimeout(() => setErrorMessage(""), 5000);
+    }
+  };
+
+  const handleStopStream = async () => {
+    try {
+      setErrorMessage("");
+      setSuccessMessage("");
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const response = await fetch(`${API_BASE_URL}/api/streams/stop`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(
+          errorData.error || `Failed to stop stream: ${response.status}`
+        );
+      }
+
+      setCurrentStream(null);
+      setSuccessMessage("Stream stopped successfully!");
+      setTimeout(() => setSuccessMessage(""), 3000);
+    } catch (error) {
+      console.error("Error stopping stream:", error);
+      setErrorMessage(error.message || "Failed to stop stream");
+      setTimeout(() => setErrorMessage(""), 5000);
     }
   };
 
@@ -292,212 +460,314 @@ const AdminPage = () => {
   }
 
   return (
-    <div className="admin-page">
-      <div className="admin-container">
-        <h2>Stream Management</h2>
+    <div>
+      <header className="app-header">
+        <h1>FrontRow Notes - Admin</h1>
+        <button
+          onClick={handleSignOut}
+          className="sign-out-btn"
+          style={{
+            backgroundColor: "#dc3545",
+            color: "white",
+            border: "none",
+            padding: "8px 16px",
+            borderRadius: "4px",
+            cursor: "pointer",
+            fontSize: "14px",
+          }}
+        >
+          Sign out
+        </button>
+      </header>
 
-        {successMessage && (
-          <div className="success-message">{successMessage}</div>
-        )}
-        {errorMessage && (
-          <div className="error-message">{errorMessage}</div>
-        )}
+      <div className="admin-page">
+        <div className="admin-container">
+          <h2>Stream Management</h2>
 
-        <div className="streams-list">
-          <h3>Active Streams</h3>
-          {streamList.length === 0 ? (
-            <p>No streams configured yet.</p>
-          ) : (
-            <table className="streams-table">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Type</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {streamList.map(stream => (
-                  <tr key={stream.id}>
-                    <td>{stream.name}</td>
-                    <td>{stream.stream_type}</td>
-                    <td>
-                      <button
-                        className={`btn btn-sm ${stream.is_active ? 'btn-success' : 'btn-secondary'}`}
-                        onClick={() => handleToggleActive(stream.id, stream.is_active)}
-                        disabled={updating}
-                      >
-                        {stream.is_active ? 'Active' : 'Inactive'}
-                      </button>
-                    </td>
-                    <td>
-                      <button
-                        className="btn btn-sm btn-primary"
-                        onClick={() => setEditingStream(stream)}
-                        disabled={updating}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        className="btn btn-sm btn-danger"
-                        onClick={() => handleDelete(stream.id)}
-                        disabled={updating}
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          {successMessage && (
+            <div className="success-message">{successMessage}</div>
           )}
-        </div>
+          {errorMessage && <div className="error-message">{errorMessage}</div>}
 
-        {editingStream ? (
-          <div className="edit-stream-form">
-            <h3>Edit Stream</h3>
-            <form onSubmit={handleUpdate}>
-              <div className="form-group">
-                <label htmlFor="name">Stream Name:</label>
-                <input
-                  type="text"
-                  id="name"
-                  name="name"
-                  value={editingStream.name}
-                  onChange={handleEditInputChange}
-                  required
-                  disabled={updating}
-                />
-              </div>
+          <div className="streams-list">
+            <h3>Active Streams</h3>
+            {streamList.length === 0 ? (
+              <p>No streams configured yet.</p>
+            ) : (
+              <table className="streams-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {streamList.map((stream) => (
+                    <tr key={stream.id}>
+                      <td>{stream.name}</td>
+                      <td>{stream.stream_type}</td>
+                      <td>
+                        <button
+                          className={`btn btn-sm ${
+                            stream.is_active ? "btn-success" : "btn-secondary"
+                          }`}
+                          onClick={() =>
+                            handleToggleActive(stream.id, stream.is_active)
+                          }
+                          disabled={updating}
+                        >
+                          {stream.is_active ? "Active" : "Inactive"}
+                        </button>
+                      </td>
+                      <td>
+                        <button
+                          onClick={() => setEditingStream(stream)}
+                          className="btn btn-sm btn-primary"
+                          disabled={updating}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDelete(stream.id)}
+                          className="btn btn-sm btn-danger"
+                          disabled={updating}
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
 
-              <div className="form-group">
-                <label htmlFor="streamType">Stream Type:</label>
-                <select
-                  id="streamType"
-                  name="streamType"
-                  value={editingStream.stream_type}
-                  onChange={handleEditInputChange}
-                  disabled={updating}
-                >
-                  <option value="youtube">YouTube Stream</option>
-                  <option value="zoom">Zoom Meeting</option>
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="streamId">Stream ID/URL:</label>
-                <input
-                  type="text"
-                  id="streamId"
-                  name="streamId"
-                  value={editingStream.stream_id}
-                  onChange={handleEditInputChange}
-                  placeholder={editingStream.stream_type === 'youtube' ? 
-                    "Enter YouTube Stream ID (e.g., dQw4w9WgXcQ)" : 
-                    "Enter Zoom Meeting URL (from 'Join from browser' link)"}
-                  required
-                  disabled={updating}
-                />
-              </div>
-
-              <div className="form-group">
-                <label>
+          {editingStream ? (
+            <div className="edit-stream-form">
+              <h3>Edit Stream</h3>
+              <form onSubmit={handleUpdate}>
+                <div className="form-group">
+                  <label htmlFor="name">Stream Name:</label>
                   <input
-                    type="checkbox"
-                    name="isActive"
-                    checked={editingStream.is_active}
+                    type="text"
+                    id="name"
+                    name="name"
+                    value={editingStream.name}
+                    onChange={handleEditInputChange}
+                    required
+                    disabled={updating}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="streamType">Stream Type:</label>
+                  <select
+                    id="streamType"
+                    name="streamType"
+                    value={editingStream.stream_type}
                     onChange={handleEditInputChange}
                     disabled={updating}
-                  />
-                  Active
-                </label>
-              </div>
+                  >
+                    <option value="youtube">YouTube Stream</option>
+                    <option value="zoom">Zoom Meeting</option>
+                    <option value="local">Local</option>
+                  </select>
+                </div>
 
-              <div className="form-actions">
-                <button type="submit" className="btn btn-primary" disabled={updating}>
-                  {updating ? 'Updating...' : 'Update Stream'}
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => setEditingStream(null)}
-                  disabled={updating}
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        ) : (
-          <div className="new-stream-form">
-            <h3>Add New Stream</h3>
-            <form onSubmit={handleSubmit}>
-              <div className="form-group">
-                <label htmlFor="newName">Stream Name:</label>
-                <input
-                  type="text"
-                  id="newName"
-                  name="name"
-                  value={newStream.name}
-                  onChange={handleInputChange}
-                  required
-                  disabled={updating}
-                />
-              </div>
+                <div className="form-group">
+                  <label htmlFor="streamId">Stream ID/URL:</label>
+                  {editingStream.stream_type === "local" ? (
+                    <div className="local-stream-input">
+                      <p className="local-stream-note">
+                        Local streams don't require a URL. Click the button
+                        below to request camera access.
+                      </p>
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        onClick={handleRequestCameraAccess}
+                        disabled={updating}
+                      >
+                        Request Camera & Microphone Access
+                      </button>
+                      {cameraAccessGranted && (
+                        <p className="access-granted">
+                          ✓ Camera and microphone access granted
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <input
+                      type="text"
+                      id="streamId"
+                      name="streamId"
+                      value={editingStream.stream_id}
+                      onChange={handleEditInputChange}
+                      placeholder={
+                        editingStream.stream_type === "youtube"
+                          ? "Enter YouTube Stream ID (e.g., dQw4w9WgXcQ)"
+                          : "Enter Zoom Meeting URL (from 'Join from browser' link)"
+                      }
+                      required={editingStream.stream_type !== "local"}
+                      disabled={updating}
+                    />
+                  )}
+                </div>
 
-              <div className="form-group">
-                <label htmlFor="newStreamType">Stream Type:</label>
-                <select
-                  id="newStreamType"
-                  name="streamType"
-                  value={newStream.streamType}
-                  onChange={handleInputChange}
-                  disabled={updating}
-                >
-                  <option value="youtube">YouTube Stream</option>
-                  <option value="zoom">Zoom Meeting</option>
-                </select>
-              </div>
+                <div className="form-group">
+                  <label>
+                    <input
+                      type="checkbox"
+                      name="isActive"
+                      checked={editingStream.is_active}
+                      onChange={handleEditInputChange}
+                      disabled={updating}
+                    />
+                    Active
+                  </label>
+                </div>
 
-              <div className="form-group">
-                <label htmlFor="newStreamId">Stream ID/URL:</label>
-                <input
-                  type="text"
-                  id="newStreamId"
-                  name="streamId"
-                  value={newStream.streamId}
-                  onChange={handleInputChange}
-                  placeholder={newStream.streamType === 'youtube' ? 
-                    "Enter YouTube Stream ID (e.g., dQw4w9WgXcQ)" : 
-                    "Enter Zoom Meeting URL (from 'Join from browser' link)"}
-                  required
-                  disabled={updating}
-                />
-              </div>
-
-              <div className="form-group">
-                <label>
+                <div className="form-actions">
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    disabled={updating}
+                  >
+                    {updating ? "Updating..." : "Update Stream"}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => setEditingStream(null)}
+                    disabled={updating}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          ) : (
+            <div className="new-stream-form">
+              <h3>Add New Stream</h3>
+              <form onSubmit={handleSubmit}>
+                <div className="form-group">
+                  <label htmlFor="newName">Stream Name:</label>
                   <input
-                    type="checkbox"
-                    name="isActive"
-                    checked={newStream.isActive}
+                    type="text"
+                    id="newName"
+                    name="name"
+                    value={newStream.name}
                     onChange={handleInputChange}
+                    required
                     disabled={updating}
                   />
-                  Active
-                </label>
-              </div>
+                </div>
 
-              <button type="submit" className="btn btn-primary" disabled={updating}>
-                {updating ? 'Creating...' : 'Create Stream'}
-              </button>
-            </form>
+                <div className="form-group">
+                  <label htmlFor="newStreamType">Stream Type:</label>
+                  <select
+                    id="newStreamType"
+                    name="streamType"
+                    value={newStream.streamType}
+                    onChange={handleInputChange}
+                    disabled={updating}
+                  >
+                    <option value="youtube">YouTube Stream</option>
+                    <option value="zoom">Zoom Meeting</option>
+                    <option value="local">Local</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="newStreamId">Stream ID/URL:</label>
+                  {newStream.streamType === "local" ? (
+                    <div className="local-stream-input">
+                      <p className="local-stream-note">
+                        Local streams don't require a URL. Click the button
+                        below to request camera access.
+                      </p>
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        onClick={handleRequestCameraAccess}
+                        disabled={updating}
+                      >
+                        Request Camera & Microphone Access
+                      </button>
+                      {cameraAccessGranted && (
+                        <p className="access-granted">
+                          ✓ Camera and microphone access granted
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <input
+                      type="text"
+                      id="newStreamId"
+                      name="streamId"
+                      value={newStream.streamId}
+                      onChange={handleInputChange}
+                      placeholder={
+                        newStream.streamType === "youtube"
+                          ? "Enter YouTube Stream ID (e.g., dQw4w9WgXcQ)"
+                          : "Enter Zoom Meeting URL (from 'Join from browser' link)"
+                      }
+                      required={newStream.streamType !== "local"}
+                      disabled={updating}
+                    />
+                  )}
+                </div>
+
+                <div className="form-group">
+                  <label>
+                    <input
+                      type="checkbox"
+                      name="isActive"
+                      checked={newStream.isActive}
+                      onChange={handleInputChange}
+                      disabled={updating}
+                    />
+                    Active
+                  </label>
+                </div>
+
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={updating}
+                >
+                  {updating ? "Creating..." : "Create Stream"}
+                </button>
+              </form>
+            </div>
+          )}
+
+          <div className="stream-container">
+            <StreamingOnlyWebcamFeed
+              isAdmin={true}
+              isLoading={isLoading}
+              streamId={currentStream?.id}
+              streamType="local"
+            />
+
+            <div className="stream-controls">
+              {currentStream ? (
+                <button onClick={handleStopStream} className="btn btn-danger">
+                  Stop Stream
+                </button>
+              ) : (
+                <button onClick={handleStartStream} className="btn btn-primary">
+                  Start Stream
+                </button>
+              )}
+            </div>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
 };
 
-export default AdminPage;
+export default memo(AdminPage);

@@ -1,6 +1,8 @@
 .sticky-notes {
     width: 25vw; 
     max-width: 350px; 
+    height: 75vh; 
+    max-height: 75vh; 
     margin-left: 20px;
     background-color: #f3e5ab;
     padding: 20px;

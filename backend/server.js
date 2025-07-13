@@ -2,12 +2,20 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
-
-const assistantService = require('./assistantService');
+const { supabase } = require('./utils/supabaseServerClient');
+const { createClient } = require('@supabase/supabase-js');
 const streamService = require('./streamService');
+const assistantService = require('./assistantService');
 const authMiddleware = require('./middleware/auth');
+const signalingService = require('./signalingService');
+const http = require('http');
 
 const app = express();
+const server = http.createServer(app);
+
+// Initialize WebSocket signaling service
+signalingService.initialize(server);
+
 const port = process.env.PORT || 5000;
 
 // Configure Multer
@@ -37,7 +45,7 @@ app.use(cors({
       callback(new Error('Not allowed by CORS'));
     }
   },
-  methods: ['GET', 'POST', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   credentials: true
 }));
 
@@ -114,6 +122,93 @@ async function main() {
           return res.status(400).json({ error: `File upload error: ${error.message}`});
         }
         return res.status(500).json({ error: 'Internal server error in AI assistant' });
+      }
+    });
+
+    // Stream management endpoints
+    app.get('/api/streams/current', authMiddleware, async (req, res) => {
+      try {
+        const stream = await streamService.getCurrentStream();
+        res.json(stream || { is_active: false });
+      } catch (error) {
+        console.error('Error getting current stream:', error);
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    });
+
+    app.post('/api/streams/start', authMiddleware, async (req, res) => {
+      try {
+        console.log('Stream start endpoint called with user ID:', req.user.id);
+        const stream = await streamService.startStream(req.user.id);
+        if (!stream) {
+          console.log('Stream start failed - returning 403');
+          return res.status(403).json({ error: 'Only admin users can start streams' });
+        }
+        console.log('Stream start successful:', stream);
+        res.json(stream);
+      } catch (error) {
+        console.error('Error starting stream:', error);
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    });
+
+    app.post('/api/streams/stop', authMiddleware, async (req, res) => {
+      try {
+        const success = await streamService.stopStream(req.user.id);
+        if (!success) {
+          return res.status(403).json({ error: 'Only admin users can stop streams' });
+        }
+        res.json({ message: 'Stream stopped successfully' });
+      } catch (error) {
+        console.error('Error stopping stream:', error);
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    });
+
+    // Admin status check endpoint
+    app.get('/api/users/admin-status', authMiddleware, async (req, res) => {
+      try {
+        const isAdmin = await streamService.isUserAdmin(req.user.id);
+        res.json({ isAdmin });
+      } catch (error) {
+        console.error('Error checking admin status:', error);
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    });
+
+    // WebRTC signaling endpoints - MUST come before /:id routes
+    app.get('/api/streams/ice-servers', authMiddleware, async (req, res) => {
+      try {
+        const iceServers = await streamService.getIceServers();
+        res.json(iceServers);
+      } catch (err) {
+        console.error('Error getting ICE servers:', err);
+        res.status(500).json({ error: 'Failed to get ICE servers' });
+      }
+    });
+
+    app.post('/api/streams/:streamId/signal', authMiddleware, async (req, res) => {
+      try {
+        const { streamId } = req.params;
+        const { signal } = req.body;
+        const response = await streamService.handleSignaling(streamId, req.user.id, signal);
+        res.json({ signal: response });
+      } catch (err) {
+        console.error('Error handling WebRTC signal:', err);
+        res.status(500).json({ error: 'Failed to handle WebRTC signal' });
+      }
+    });
+
+    app.post('/api/streams/:streamId/ice-candidate', authMiddleware, async (req, res) => {
+      try {
+        const { streamId } = req.params;
+        const { candidate } = req.body;
+        // Store the ICE candidate for the stream
+        // In a real implementation, you would use a signaling server or WebSocket
+        res.json({ success: true });
+      } catch (err) {
+        console.error('Error handling ICE candidate:', err);
+        res.status(500).json({ error: 'Failed to handle ICE candidate' });
       }
     });
 
@@ -204,8 +299,36 @@ async function main() {
       }
     });
 
+    // Debug endpoint to test admin status
+    app.get('/api/debug/admin-status', authMiddleware, async (req, res) => {
+      try {
+        console.log('Debug: User ID from request:', req.user.id);
+        console.log('Debug: User object:', req.user);
+        
+        const { data, error } = await supabase.auth.admin.getUserById(req.user.id);
+        
+        if (error) {
+          console.error('Debug: Error getting user:', error);
+          return res.status(500).json({ error: error.message });
+        }
+        
+        console.log('Debug: Full user data:', data);
+        
+        res.json({
+          userId: req.user.id,
+          userData: data,
+          appMetadata: data.user?.app_metadata,
+          role: data.user?.app_metadata?.role,
+          isAdmin: data.user?.app_metadata?.role === 'admin'
+        });
+      } catch (err) {
+        console.error('Debug: Unexpected error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    });
+
     // Start the server after everything is initialized
-    app.listen(port, () => {
+    server.listen(port, () => {
       console.log(`Server running on port ${port}`);
     });
 

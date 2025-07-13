@@ -112,7 +112,7 @@ export const uploadImage = async (file, noteId) => {
  */
 export const getNotes = async () => {
     try {
-        console.log('Fetching notes...');
+        // console.log('Fetching notes...');
         
         const { data, error } = await supabase
             .from('notes')
@@ -124,7 +124,7 @@ export const getNotes = async () => {
             throw error;
         }
         
-        console.log('Notes fetched successfully:', data);
+        // console.log('Notes fetched successfully:', data);
         return data;
     } catch (error) {
         console.error('Error fetching notes:', error.message);

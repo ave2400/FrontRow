@@ -12,7 +12,7 @@ function AdminOnly({ children }) {
       });
 
       if (error) {
-        console.error('Error checking admin status:', error);
+        // console.error('Error checking admin status:', error);
         // setError('Failed to check admin status. Please try again.');
         setLoading(false);
         return;
@@ -34,7 +34,7 @@ function AdminOnly({ children }) {
 
   return (
     <>
-      {isAdmin ? children : <div>You do not have permission to view this page.</div>}
+      {isAdmin ? children : <></>}
     </>
   );
 }
