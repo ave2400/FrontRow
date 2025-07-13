@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import './Contrast.css';
 import "../styles/buttons.css";
 
@@ -16,6 +16,39 @@ const ContrastControls = ({ onFilterChange }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [activePreset, setActivePreset] = useState('default');
   const [filters, setFilters] = useState(PRESETS.default);
+  const [panelPosition, setPanelPosition] = useState({ above: false, left: false });
+  const buttonRef = useRef(null);
+  const panelRef = useRef(null);
+
+  const calculatePosition = () => {
+    if (!buttonRef.current || !panelRef.current) return;
+
+    const buttonRect = buttonRef.current.getBoundingClientRect();
+    const panelRect = panelRef.current.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    const wouldGoBelow = buttonRect.bottom + panelRect.height + 8 > viewportHeight;
+    const wouldGoRight = buttonRect.left + panelRect.width > viewportWidth;
+    const wouldGoLeft = buttonRect.left - panelRect.width < 0;
+
+    setPanelPosition({
+      above: wouldGoBelow,
+      left: wouldGoRight,
+      right: wouldGoLeft,
+    });
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      setTimeout(calculatePosition, 0);
+      
+      const handleResize = () => calculatePosition();
+      window.addEventListener('resize', handleResize);
+      
+      return () => window.removeEventListener('resize', handleResize);
+    }
+  }, [isOpen]);
 
   const handlePresetChange = (presetName) => {
     setActivePreset(presetName);
@@ -30,18 +63,26 @@ const ContrastControls = ({ onFilterChange }) => {
     onFilterChange(newFilters);
   };
 
+  const togglePanel = () => {
+    setIsOpen(!isOpen);
+  };
+
   return (
     <div className="contrast-controls">
       <button 
+        ref={buttonRef}
         className="btn btn-icon"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={togglePanel}
         title="Contrast Options"
       >
         <span role="img" aria-label="Contrast">👁️</span>
       </button>
       
       {isOpen && (
-        <div className="contrast-panel">
+        <div 
+          ref={panelRef}
+          className={`contrast-panel ${panelPosition.above ? 'position-above' : ''} ${panelPosition.left ? 'position-left' : ''}`}
+        >
           <h3>Contrast Settings</h3>
           
           <div className="presets">

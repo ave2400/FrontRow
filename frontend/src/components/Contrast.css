@@ -1,5 +1,8 @@
 .contrast-controls {
   position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .contrast-toggle {
@@ -24,14 +27,38 @@
 
 .contrast-panel {
   position: absolute;
-  bottom: 50px;
-  right: 0;
   background-color: white;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   padding: 16px;
   width: 280px;
   z-index: 100;
+  /* Dynamic positioning - will be set by JavaScript */
+  bottom: auto;
+  right: auto;
+  top: 100%;
+  /* left: 0; */
+  margin-top: 8px;
+}
+
+/* Fallback positioning when there's not enough space below */
+.contrast-panel.position-above {
+  top: auto;
+  bottom: 100%;
+  margin-top: 0;
+  margin-bottom: 8px;
+}
+
+/* Fallback positioning when there's not enough space on the right */
+.contrast-panel.position-left {
+  left: auto;
+  right: 0;
+}
+
+/* Fallback positioning when there's not enough space on both sides */
+.contrast-panel.position-above.position-left {
+  left: auto;
+  right: 0;
 }
 
 .contrast-panel h3 {
@@ -76,4 +103,122 @@
 
 .filter-control input[type="range"] {
   width: 100%;
+}
+
+/* Responsive design for smaller screens */
+@media (max-width: 768px) {
+  .contrast-panel {
+    width: 240px;
+    padding: 12px;
+  }
+  
+  .contrast-panel h3 {
+    font-size: 14px;
+    margin-bottom: 10px;
+  }
+  
+  .presets p {
+    font-size: 12px;
+  }
+  
+  .preset-buttons {
+    gap: 6px;
+  }
+  
+  .preset-buttons .btn {
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+  
+  .filter-control label {
+    font-size: 12px;
+  }
+  
+  .filter-sliders {
+    gap: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .contrast-panel {
+    width: 200px;
+    padding: 10px;
+  }
+  
+  .contrast-panel h3 {
+    font-size: 13px;
+    margin-bottom: 8px;
+  }
+  
+  .presets {
+    margin-bottom: 12px;
+  }
+  
+  .presets p {
+    font-size: 11px;
+    margin-bottom: 6px;
+  }
+  
+  .preset-buttons {
+    gap: 4px;
+  }
+  
+  .preset-buttons .btn {
+    padding: 3px 6px;
+    font-size: 10px;
+  }
+  
+  .filter-control label {
+    font-size: 11px;
+  }
+  
+  .filter-sliders {
+    gap: 8px;
+  }
+  
+  .filter-control {
+    gap: 3px;
+  }
+}
+
+@media (max-width: 360px) {
+  .contrast-panel {
+    width: 180px;
+    padding: 8px;
+  }
+  
+  .contrast-panel h3 {
+    font-size: 12px;
+    margin-bottom: 6px;
+  }
+  
+  .presets {
+    margin-bottom: 10px;
+  }
+  
+  .presets p {
+    font-size: 10px;
+    margin-bottom: 4px;
+  }
+  
+  .preset-buttons {
+    gap: 3px;
+  }
+  
+  .preset-buttons .btn {
+    padding: 2px 4px;
+    font-size: 9px;
+  }
+  
+  .filter-control label {
+    font-size: 10px;
+  }
+  
+  .filter-sliders {
+    gap: 6px;
+  }
+  
+  .filter-control {
+    gap: 2px;
+  }
 }
