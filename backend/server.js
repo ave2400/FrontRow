@@ -16,7 +16,12 @@ const server = http.createServer(app);
 // Initialize WebSocket signaling service
 signalingService.initialize(server);
 
-const port = process.env.PORT || 5000;
+const port = parseInt(process.env.PORT, 10) || 5000;
+const host = '0.0.0.0';   // Ensures it listens on all interfaces
+
+server.listen(port, host, () => {
+  console.log(`Server running on http://${host}:${port}`);
+});
 
 // Configure Multer
 // TODO: Currently storing in memory for simplicity. For production, may want to consider diskStorage or cloud storage.
@@ -35,7 +40,7 @@ const upload = multer({
 });
 
 // Middleware
-const allowedOrigins = ['http://localhost:3000', 'https://frontrow-frontend.vercel.app'];
+const allowedOrigins = ['http://localhost:3000', 'https://frontrow-frontend.vercel.app', 'https://frontrow-frontend-b2o0.onrender.com'];
 
 app.use(cors({
   origin: function (origin, callback) {
