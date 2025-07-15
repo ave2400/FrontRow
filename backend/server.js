@@ -19,9 +19,6 @@ signalingService.initialize(server);
 const port = parseInt(process.env.PORT, 10) || 5000;
 const host = '0.0.0.0';   // Ensures it listens on all interfaces
 
-server.listen(port, host, () => {
-  console.log(`Server running on http://${host}:${port}`);
-});
 
 // Configure Multer
 // TODO: Currently storing in memory for simplicity. For production, may want to consider diskStorage or cloud storage.
