@@ -9,7 +9,7 @@ class SignalingService {
   }
 
   initialize(server) {
-    const allowedOrigins = ['http://localhost:3000', 'https://frontrow-frontend.vercel.app'];
+    const allowedOrigins = ['http://localhost:3000', 'https://frontrow-frontend.vercel.app', 'https://frontrow-frontend-b2o0.onrender.com'];
     
     this.io = new Server(server, {
       cors: {
