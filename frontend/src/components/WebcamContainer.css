@@ -83,7 +83,6 @@
 
 /* Container-based responsive scaling */
 .webcam-container-wrapper {
-  --container-width: 100%;
 }
 
 /* Scale controls based on container width */
