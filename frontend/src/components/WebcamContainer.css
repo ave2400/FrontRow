@@ -81,9 +81,6 @@
   }
 }
 
-/* Container-based responsive scaling */
-/* Removed empty .webcam-container-wrapper rule block */
-
 /* Scale controls based on container width */
 .webcam-container-wrapper[data-container-width="small"] .top-controls {
   padding: 4px 6px;
