@@ -21,6 +21,7 @@ const WebcamContainer = ({ onScreenshot, streams = [], selectedStreamId, onStrea
   const dragStartRef = useRef({ x: 0, y: 0 });
   const positionRef = useRef({ x: 0, y: 0 });
   const containerRef = useRef(null);
+  const [containerWidth, setContainerWidth] = useState('large');
 
   // Get the selected stream
   const selectedStream = streams.find(s => s.id === selectedStreamId) || null;
@@ -137,6 +138,33 @@ const WebcamContainer = ({ onScreenshot, streams = [], selectedStreamId, onStrea
     setFilters(newFilters);
   };
 
+  // Detect container width for responsive scaling
+  useEffect(() => {
+    const updateContainerWidth = () => {
+      if (containerRef.current) {
+        const width = containerRef.current.offsetWidth;
+        if (width < 300) {
+          setContainerWidth('small');
+        } else if (width < 500) {
+          setContainerWidth('medium');
+        } else {
+          setContainerWidth('large');
+        }
+      }
+    };
+
+    updateContainerWidth();
+    
+    const resizeObserver = new ResizeObserver(updateContainerWidth);
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
+    }
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
+
   // Use browser API to capture current tab
   const takeScreenshot = async () => {
     try {
@@ -219,7 +247,7 @@ const WebcamContainer = ({ onScreenshot, streams = [], selectedStreamId, onStrea
   };
 
   return (
-    <div className="webcam-container-wrapper">
+    <div className="webcam-container-wrapper" data-container-width={containerWidth}>
       {/* Controls section at the top */}
       <div className="top-controls">
         {streams.length > 0 && (

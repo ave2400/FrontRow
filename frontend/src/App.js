@@ -1,12 +1,7 @@
-import React, { useState, useEffect, useCallback } from "react";
-import {
-  BrowserRouter as Router,
-  Routes,
-  Route,
-  Navigate,
-  Link,
-} from "react-router-dom";
-import { supabase } from "./supabaseClient";
+import React, { useState, useEffect, useCallback } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
+import { PanelGroup, Panel, PanelResizeHandle } from 'react-resizable-panels';
+import { supabase } from './supabaseClient';
 import WebcamContainer from "./components/WebcamContainer";
 import StickyNotes from "./components/StickyNotes";
 import AIAssistant from "./components/AIAssistant";
@@ -31,6 +26,10 @@ function App() {
   const [streams, setStreams] = useState([]);
   const [selectedStreamId, setSelectedStreamId] = useState("");
   const [hasInitiallyLoaded, setHasInitiallyLoaded] = useState(false);
+  const [panelLayout, setPanelLayout] = useState(() => {
+    const savedLayout = localStorage.getItem('frontrow-panel-layout');
+    return savedLayout ? JSON.parse(savedLayout) : [50, 50]; 
+  });
 
   // Fetch auth session
   useEffect(() => {
@@ -171,6 +170,11 @@ function App() {
     }
   };
 
+  const handleLayoutChange = useCallback((layout) => {
+    setPanelLayout(layout);
+    localStorage.setItem('frontrow-panel-layout', JSON.stringify(layout));
+  }, []);
+
   if ((streamLoading || adminLoading) && !hasInitiallyLoaded) {
     return <div className="loading">Loading...</div>;
   }
@@ -222,21 +226,37 @@ function App() {
                     </div>
                   </header>
                   <div className="main-content">
-                    <WebcamContainer
-                      onScreenshot={handleScreenshot}
-                      streams={streams}
-                      selectedStreamId={selectedStreamId}
-                      onStreamSelect={setSelectedStreamId}
-                      isLoading={streamLoading}
-                      isAdmin={false}
-                    />
-                    <div className="sidebar">
-                      <StickyNotes
-                        currentNote={currentNote}
-                        setCurrentNote={setCurrentNote}
-                      />
-                      <AIAssistant />
-                    </div>
+                    {streamLoading ? (
+                      <div className="stream-loading">Loading stream settings...</div>
+                    ) : (
+                      <PanelGroup
+                        direction="horizontal"
+                        className="panel-group"
+                        onLayout={handleLayoutChange}
+                      >
+                        <Panel defaultSize={panelLayout[0]} minSize={20} className="panel">
+                          <WebcamContainer
+                            onScreenshot={handleScreenshot}
+                            streams={streams}
+                            selectedStreamId={selectedStreamId}
+                            onStreamSelect={setSelectedStreamId}
+                            isLoading={streamLoading}
+                            isAdmin={false}
+                          />
+                        </Panel>
+                        <PanelResizeHandle className="resize-handle" />
+                        <Panel defaultSize={panelLayout[1]} minSize={0} className="panel">
+                          <div className="notes-section">
+                            <StickyNotes
+                              currentNote={currentNote}
+                              setCurrentNote={setCurrentNote}
+                              onScreenshot={handleScreenshot}
+                            />
+                          </div>
+                        </Panel>
+                      </PanelGroup>
+                    )}
+                    <AIAssistant currentNote={currentNote} />
                   </div>
                 </>
               ) : (
