@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import './Contrast.css';
 import "../styles/buttons.css";
 
@@ -35,14 +35,15 @@ const ContrastControls = ({ onFilterChange }) => {
     setPanelPosition({
       above: wouldGoBelow,
       left: wouldGoRight,
-      right: wouldGoLeft,
     });
   };
 
+  useLayoutEffect(() => {
+    calculatePosition();
+  }, [isOpen]);
+
   useEffect(() => {
-    if (isOpen) {
-      setTimeout(calculatePosition, 0);
-      
+    if (isOpen) {      
       const handleResize = () => calculatePosition();
       window.addEventListener('resize', handleResize);
       
@@ -74,6 +75,8 @@ const ContrastControls = ({ onFilterChange }) => {
         className="btn btn-icon"
         onClick={togglePanel}
         title="Contrast Options"
+        aria-expanded={isOpen}
+        aria-controls="contrast-panel"
       >
         <span role="img" aria-label="Contrast">👁️</span>
       </button>
@@ -81,6 +84,7 @@ const ContrastControls = ({ onFilterChange }) => {
       {isOpen && (
         <div 
           ref={panelRef}
+          id="contrast-panel"
           className={`contrast-panel ${panelPosition.above ? 'position-above' : ''} ${panelPosition.left ? 'position-left' : ''}`}
         >
           <h3>Contrast Settings</h3>
