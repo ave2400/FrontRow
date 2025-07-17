@@ -15,34 +15,33 @@ const StickyNotes = ({ currentNote, setCurrentNote, onScreenshot }) => {
 
   useEffect(() => {
     loadNotes();
-    const loadPersistedNote = async () => {
-      const persistedNote = localStorage.getItem('currentNote');
-      if (persistedNote) {
-        try {
-          const parsedNote = JSON.parse(persistedNote);
-          if (parsedNote.images && parsedNote.images.length > 0) {
-            const convertedImages = await Promise.all(
-              parsedNote.images.map(async (imageData) => {
-                if (typeof imageData === 'string' && imageData.startsWith('data:')) {
-                  const response = await fetch(imageData);
-                  return await response.blob();
-                }
-                return imageData;
-              })
-            );
-            parsedNote.images = convertedImages;
-          }
-          setCurrentNote(parsedNote);
-        } catch (error) {
-          console.error('Error parsing persisted note:', error);
-          localStorage.removeItem('currentNote');
-        }
-      }
-    };
-    
     loadPersistedNote();
   }, [setCurrentNote]);
 
+  const loadPersistedNote = async () => {
+    const persistedNote = localStorage.getItem('currentNote');
+    if (persistedNote) {
+      try {
+        const parsedNote = JSON.parse(persistedNote);
+        if (parsedNote.images && parsedNote.images.length > 0) {
+          const convertedImages = await Promise.all(
+            parsedNote.images.map(async (imageData) => {
+              if (typeof imageData === 'string' && imageData.startsWith('data:')) {
+                const response = await fetch(imageData);
+                return await response.blob();
+              }
+              return imageData;
+            })
+          );
+          parsedNote.images = convertedImages;
+        }
+        setCurrentNote(parsedNote);
+      } catch (error) {
+        console.error('Error parsing persisted note:', error);
+        localStorage.removeItem('currentNote');
+      }
+    }
+  };
   useEffect(() => {
     const saveToLocalStorage = async () => {
       if (currentNote.title || currentNote.content || (currentNote.images && currentNote.images.length > 0)) {
