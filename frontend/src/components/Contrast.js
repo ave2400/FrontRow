@@ -35,7 +35,6 @@ const ContrastControls = ({ onFilterChange }) => {
     setPanelPosition({
       above: wouldGoBelow,
       left: wouldGoRight,
-      right: wouldGoLeft,
     });
   };
 
