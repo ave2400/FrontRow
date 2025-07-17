@@ -43,32 +43,31 @@ const StickyNotes = ({ currentNote, setCurrentNote, onScreenshot }) => {
     }
   };
   useEffect(() => {
-    const saveToLocalStorage = async () => {
-      if (currentNote.title || currentNote.content || (currentNote.images && currentNote.images.length > 0)) {
-        const noteForStorage = {
-          ...currentNote,
-          images: currentNote.images ? await Promise.all(
-            currentNote.images.map(async (image) => {
-              if (image instanceof Blob) {
-                return new Promise((resolve) => {
-                  const reader = new FileReader();
-                  reader.onloadend = () => resolve(reader.result);
-                  reader.readAsDataURL(image);
-                });
-              }
-              return image;
-            })
-          ) : []
-        };
-        localStorage.setItem('currentNote', JSON.stringify(noteForStorage));
-      } else {
-        localStorage.removeItem('currentNote');
-      }
-    };
-    
-    saveToLocalStorage();
+    saveToLocalStorage(currentNote);
   }, [currentNote]);
 
+  const saveToLocalStorage = async (currentNote) => {
+    if (currentNote.title || currentNote.content || (currentNote.images && currentNote.images.length > 0)) {
+      const noteForStorage = {
+        ...currentNote,
+        images: currentNote.images ? await Promise.all(
+          currentNote.images.map(async (image) => {
+            if (image instanceof Blob) {
+              return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.readAsDataURL(image);
+              });
+            }
+            return image;
+          })
+        ) : []
+      };
+      localStorage.setItem('currentNote', JSON.stringify(noteForStorage));
+    } else {
+      localStorage.removeItem('currentNote');
+    }
+  };
   // Handle screenshot from WebcamContainer
   useEffect(() => {
     if (onScreenshot) {
