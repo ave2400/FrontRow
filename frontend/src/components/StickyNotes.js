@@ -18,6 +18,15 @@ const StickyNotes = ({ currentNote, setCurrentNote, onScreenshot }) => {
     loadPersistedNote();
   }, [setCurrentNote]);
 
+  const loadNotes = async () => {
+    try {
+      const fetchedNotes = await getNotes();
+      setNotes(fetchedNotes);
+    } catch (error) {
+      console.error('Error loading notes:', error);
+    }
+  };
+
   const loadPersistedNote = async () => {
     const persistedNote = localStorage.getItem('currentNote');
     if (persistedNote) {
@@ -42,6 +51,7 @@ const StickyNotes = ({ currentNote, setCurrentNote, onScreenshot }) => {
       }
     }
   };
+
   useEffect(() => {
     saveToLocalStorage(currentNote);
   }, [currentNote]);
@@ -68,6 +78,7 @@ const StickyNotes = ({ currentNote, setCurrentNote, onScreenshot }) => {
       localStorage.removeItem('currentNote');
     }
   };
+
   // Handle screenshot from WebcamContainer
   useEffect(() => {
     if (onScreenshot) {
@@ -93,15 +104,6 @@ const StickyNotes = ({ currentNote, setCurrentNote, onScreenshot }) => {
     }
   }, [onScreenshot, currentNote.title, setCurrentNote]);
 
-  const loadNotes = async () => {
-    try {
-      const fetchedNotes = await getNotes();
-      setNotes(fetchedNotes);
-    } catch (error) {
-      console.error('Error loading notes:', error);
-    }
-  };
-
   const addNote = async () => {
     if (currentNote.title.trim() && currentNote.content.trim()) {
       setLoading(true);
@@ -111,20 +113,28 @@ const StickyNotes = ({ currentNote, setCurrentNote, onScreenshot }) => {
           content: currentNote.content,
           image_urls: []
         };
-        
+
         const newNote = await createNote(noteData);
-        
+
         if (currentNote.images && currentNote.images.length > 0) {
-          const uploadedUrls = [];
-          for (const image of currentNote.images) {
-            try {
-              const imageUrl = await uploadImage(image, newNote.id);
-              uploadedUrls.push(imageUrl);
-            } catch (error) {
-              console.error('Error uploading image:', error);
-            }
+          let uploadedUrls = [];
+          try {
+            uploadedUrls = await Promise.all(
+              currentNote.images.map(async (image) => {
+                try {
+                  return await uploadImage(image, newNote.id);
+                } catch (error) {
+                  console.error('Error uploading image:', error);
+                  return null; // Return null for failed uploads
+                }
+              })
+            );
+            // Filter out any null values from failed uploads
+            uploadedUrls = uploadedUrls.filter((url) => url !== null);
+          } catch (error) {
+            console.error('Error during image uploads:', error);
           }
-          
+
           if (uploadedUrls.length > 0) {
             const updatedNote = await updateNote(newNote.id, { image_urls: uploadedUrls });
             setNotes([...notes, updatedNote]);
@@ -134,7 +144,7 @@ const StickyNotes = ({ currentNote, setCurrentNote, onScreenshot }) => {
         } else {
           setNotes([...notes, newNote]);
         }
-        
+
         setCurrentNote({ title: "", content: "", images: [] });
         localStorage.removeItem('currentNote');
       } catch (error) {
@@ -217,9 +227,9 @@ const StickyNotes = ({ currentNote, setCurrentNote, onScreenshot }) => {
             <div className="note-images">
               {note.image_urls.map((url, index) => (
                 <div key={index} className="note-image-container">
-                  <img 
-                    src={url} 
-                    alt={`Screenshot ${index + 1}`} 
+                  <img
+                    src={url}
+                    alt={`Screenshot ${index + 1}`}
                     className="note-image"
                     onClick={() => window.open(url, '_blank')}
                   />
@@ -227,8 +237,8 @@ const StickyNotes = ({ currentNote, setCurrentNote, onScreenshot }) => {
               ))}
             </div>
           )}
-          <button 
-            className="btn btn-danger btn-sm" 
+          <button
+            className="btn btn-danger btn-sm"
             onClick={() => onDelete(note.id)}
           >
             Delete
@@ -254,33 +264,39 @@ const StickyNotes = ({ currentNote, setCurrentNote, onScreenshot }) => {
           onChange={handleChange}
           placeholder="Type your notes..."
         ></textarea>
-        {currentNote.images && currentNote.images.length > 0 && (
-          <div className="current-images">
-            <h4>Current Images:</h4>
-            <div className="image-preview-grid">
-              {currentNote.images.map((image, index) => {
-                // Only create object URL if image is a Blob or File
-                const imageUrl = image instanceof Blob ? URL.createObjectURL(image) : image;
-                return (
-                  <div key={index} className="image-preview">
-                    <img 
-                      src={imageUrl} 
-                      alt={`Preview ${index + 1}`} 
-                    />
-                    <button 
-                      className="remove-image"
-                      onClick={() => removeImage(index)}
-                    >
-                      ×
-                    </button>
-                  </div>
-                );
-              })}
+        {currentNote.images && currentNote.images.filter(image => (
+          image instanceof Blob || image instanceof File || (typeof image === 'string' && image.startsWith('data:'))
+        )).length > 0 && (
+            <div className="current-images">
+              <h4>Current Images:</h4>
+              <div className="image-preview-grid">
+                {currentNote.images
+                  .map((image, index) => ({ image, index }))
+                  .filter(({ image }) => (
+                    image instanceof Blob || image instanceof File || (typeof image === 'string' && image.startsWith('data:'))
+                  ))
+                  .map(({ image, index }) => {
+                    const imageUrl = image instanceof Blob ? URL.createObjectURL(image) : image;
+                    return (
+                      <div key={index} className="image-preview">
+                        <img
+                          src={imageUrl}
+                          alt={`Preview ${index + 1}`}
+                        />
+                        <button
+                          className="remove-image"
+                          onClick={() => removeImage(index)}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    );
+                  })}
+              </div>
             </div>
-          </div>
-        )}
-        <button 
-          className="btn btn-primary" 
+          )}
+        <button
+          className="btn btn-primary"
           onClick={addNote}
           disabled={loading}
         >
