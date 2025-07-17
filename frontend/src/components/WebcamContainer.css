@@ -82,8 +82,7 @@
 }
 
 /* Container-based responsive scaling */
-.webcam-container-wrapper {
-}
+/* Removed empty .webcam-container-wrapper rule block */
 
 /* Scale controls based on container width */
 .webcam-container-wrapper[data-container-width="small"] .top-controls {
