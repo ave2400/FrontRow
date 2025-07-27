@@ -3,7 +3,9 @@ import './AIAssistant.css';
 import logo from './FrontRow_Eyeball_Logo.svg';
 import { marked } from 'marked';
 
-const AI_ASSISTANT_API_URL = `${process.env.REACT_APP_BACKEND}/api/ai/assistant`;
+const AI_ASSISTANT_API_URL = `${process.env.REACT_APP_API_URL}/api/ai/assistant`;
+console.log('DEBUG: REACT_APP_API_URL =', process.env.REACT_APP_API_URL);
+console.log('DEBUG: AI_ASSISTANT_API_URL =', AI_ASSISTANT_API_URL);
 
 const AIAssistant = ({ currentNote }) => {
   const [showButtons, setShowButtons] = useState(false);
