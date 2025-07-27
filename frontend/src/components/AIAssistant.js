@@ -24,7 +24,7 @@ const AIAssistant = ({ currentNote }) => {
     if (typeof noteContent !== 'string') {
       return;
     }
-
+    
     // Clear previous timeout
     if (debounceTimeoutRef.current) {
       clearTimeout(debounceTimeoutRef.current);
@@ -53,7 +53,9 @@ const AIAssistant = ({ currentNote }) => {
         });
 
         if (!apiResponse.ok) {
-          throw new Error('Failed to check concepts');
+          const errorText = await apiResponse.text();
+          console.error('API response not ok:', apiResponse.status, errorText);
+          throw new Error(`Failed to check concepts: ${apiResponse.status} ${errorText}`);
         }
 
         const data = await apiResponse.json();
@@ -98,7 +100,11 @@ const AIAssistant = ({ currentNote }) => {
           concept: detectedConcept
         }),
       });
-      if (!apiResponse.ok) throw new Error('Failed to get explanation');
+      if (!apiResponse.ok) {
+        const errorText = await apiResponse.text();
+        console.error('API response not ok:', apiResponse.status, errorText);
+        throw new Error(`Failed to get explanation: ${apiResponse.status} ${errorText}`);
+      }
       const data = await apiResponse.json();
       setResponse(data.response);
     } catch (error) {
@@ -123,7 +129,11 @@ const AIAssistant = ({ currentNote }) => {
           concept: detectedConcept
         }),
       });
-      if (!apiResponse.ok) throw new Error('Failed to get practice question');
+      if (!apiResponse.ok) {
+        const errorText = await apiResponse.text();
+        console.error('API response not ok:', apiResponse.status, errorText);
+        throw new Error(`Failed to get practice question: ${apiResponse.status} ${errorText}`);
+      }
       const data = await apiResponse.json();
       setResponse(data.response);
     } catch (error) {
@@ -145,10 +155,14 @@ const AIAssistant = ({ currentNote }) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'getExplanation',
-          concept: { name: customTopic, category: 'custom' }
+          concept: { name: customTopic }
         }),
       });
-      if (!apiResponse.ok) throw new Error('Failed to get explanation');
+      if (!apiResponse.ok) {
+        const errorText = await apiResponse.text();
+        console.error('API response not ok:', apiResponse.status, errorText);
+        throw new Error(`Failed to get explanation: ${apiResponse.status} ${errorText}`);
+      }
       const data = await apiResponse.json();
       setResponse(data.response);
     } catch (error) {
