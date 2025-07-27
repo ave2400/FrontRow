@@ -67,10 +67,7 @@ const assistantService = {
   async checkConcepts(content, { lastContent = "", forceRetriggerConcept = null } = {}) {
     await ensureConceptBankInitialized();
 
-    console.log('checkConcepts called with content:', content.substring(0, 100) + '...');
-
     if (!content || content.trim() === "") {
-      console.log('No content provided, returning null');
       return { detectedConcept: null };
     }
 
@@ -89,8 +86,6 @@ const assistantService = {
     }
     // If content changed drastically not by appending/deleting from end, analyze all.
 
-    console.log('Text to analyze:', textToAnalyze.substring(0, 100) + '...');
-
     let noteEmbedding;
     try {
       const embeddingResponse = await openai.embeddings.create({
@@ -98,7 +93,6 @@ const assistantService = {
         input: textToAnalyze,
       });
       noteEmbedding = embeddingResponse.data[0].embedding;
-      console.log('Successfully got embedding');
     } catch (error) {
       console.error("Error getting embedding for content:", error);
       return { detectedConcept: null };
@@ -110,12 +104,7 @@ const assistantService = {
 
     const now = Date.now();
 
-    console.log('Checking against concept bank with', Object.keys(conceptBank).length, 'categories');
-
     for (const category in conceptBank) {
-      const categoryConcepts = Object.keys(conceptBank[category]).length;
-      console.log(`Checking category ${category} with ${categoryConcepts} concepts`);
-      
       for (const conceptName in conceptBank[category]) {
         const conceptData = conceptBank[category][conceptName];
         if (!conceptData || !conceptData.embedding) {
@@ -126,7 +115,6 @@ const assistantService = {
         // Cooldown check: Skip if recently triggered, unless forced
         if (conceptName !== forceRetriggerConcept && recentlyTriggeredConcepts.has(conceptName)) {
           if ((now - recentlyTriggeredConcepts.get(conceptName)) < CONCEPT_COOLDOWN_MS) {
-            console.log(`Concept '${conceptName}' is in cooldown. Skipping.`);
             continue;
           } else {
             recentlyTriggeredConcepts.delete(conceptName); // Cooldown expired
@@ -139,7 +127,6 @@ const assistantService = {
         );
 
         if (similarity > 0.7) { // Only log high similarity matches
-          console.log(`High similarity for ${conceptName}: ${similarity}`);
         }
 
         if (similarity > maxSimilarity && similarity > SIMILARITY_THRESHOLD) {
@@ -150,12 +137,10 @@ const assistantService = {
             prompt: conceptData.prompt,
             similarity: similarity
           };
-          console.log(`New best match: ${conceptName} with similarity ${similarity}`);
         }
       }
     }
 
-    console.log('Final detected concept:', detectedConcept);
     return { detectedConcept };
   },
 

@@ -4,7 +4,6 @@ import logo from './FrontRow_Eyeball_Logo.svg';
 import { marked } from 'marked';
 
 const AI_ASSISTANT_API_URL = `${process.env.REACT_APP_BACKEND}/api/ai/assistant`;
-console.log('AI Assistant API URL:', AI_ASSISTANT_API_URL);
 
 const AIAssistant = ({ currentNote }) => {
   const [showButtons, setShowButtons] = useState(false);
@@ -42,8 +41,6 @@ const AIAssistant = ({ currentNote }) => {
         return;
       }
 
-      console.log('Checking concepts for content:', noteContent.substring(0, 100) + '...');
-
       try {
         const apiResponse = await fetch(AI_ASSISTANT_API_URL, {
           method: 'POST',
@@ -62,7 +59,6 @@ const AIAssistant = ({ currentNote }) => {
         }
 
         const data = await apiResponse.json();
-        console.log('Concept detection response:', data);
         setDetectedConcept(data.detectedConcept);
       } catch (error) {
         console.error('Error checking concepts:', error);
