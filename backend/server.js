@@ -68,6 +68,8 @@ async function main() {
 
     // AI Assistant Routes
     app.post('/api/ai/assistant', upload.single('image'), async (req, res) => {
+      console.log('AI Assistant endpoint called with action:', req.body.action);
+      
       if (!assistantServiceInstance) {
         console.error("AI Assistant service not ready.");
         return res.status(503).json({ error: "Service not available, please try again shortly." });
@@ -81,16 +83,22 @@ async function main() {
 
         switch (action) {
           case 'checkConcepts':
+            console.log('Processing checkConcepts with content length:', content?.length);
             const checkConceptsOptions = lastContent ? { lastContent } : {};
             const result = await assistantServiceInstance.checkConcepts(content, checkConceptsOptions);
+            console.log('checkConcepts result:', result);
             return res.json(result);
 
           case 'getExplanation':
+            console.log('Processing getExplanation for concept:', concept);
             const explanation = await assistantServiceInstance.getExplanation(concept);
+            console.log('getExplanation result length:', explanation.response?.length);
             return res.json(explanation);
 
           case 'getPracticeQuestion':
+            console.log('Processing getPracticeQuestion for concept:', concept);
             const question = await assistantServiceInstance.getPracticeQuestion(concept);
+            console.log('getPracticeQuestion result length:', question.response?.length);
             return res.json(question);
 
           case 'getImageSummary':
@@ -117,6 +125,7 @@ async function main() {
             return res.status(400).json({ error: 'Invalid action or missing action' });
         }
       } catch (error) {
+        console.error('Error in AI assistant API (/api/ai/assistant):', error);
         if (error instanceof multer.MulterError) {
           if (error.code === 'LIMIT_FILE_SIZE') {
             return res.status(413).json({ error: 'Image file is too large.' });

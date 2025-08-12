@@ -86,7 +86,6 @@ const assistantService = {
     }
     // If content changed drastically not by appending/deleting from end, analyze all.
 
-
     let noteEmbedding;
     try {
       const embeddingResponse = await openai.embeddings.create({
@@ -109,14 +108,13 @@ const assistantService = {
       for (const conceptName in conceptBank[category]) {
         const conceptData = conceptBank[category][conceptName];
         if (!conceptData || !conceptData.embedding) {
-          // console.warn(`Concept data or embedding missing for ${conceptName} in ${category}. Skipping.`);
+          console.warn(`Concept data or embedding missing for ${conceptName} in ${category}. Skipping.`);
           continue;
         }
 
         // Cooldown check: Skip if recently triggered, unless forced
         if (conceptName !== forceRetriggerConcept && recentlyTriggeredConcepts.has(conceptName)) {
           if ((now - recentlyTriggeredConcepts.get(conceptName)) < CONCEPT_COOLDOWN_MS) {
-            // console.log(`Concept '${conceptName}' is in cooldown. Skipping.`);
             continue;
           } else {
             recentlyTriggeredConcepts.delete(conceptName); // Cooldown expired
@@ -128,6 +126,9 @@ const assistantService = {
           conceptData.embedding
         );
 
+        if (similarity > 0.7) { // Only log high similarity matches
+        }
+
         if (similarity > maxSimilarity && similarity > SIMILARITY_THRESHOLD) {
           maxSimilarity = similarity;
           detectedConcept = {
@@ -138,12 +139,6 @@ const assistantService = {
           };
         }
       }
-    }
-
-    if (detectedConcept) {
-      // If a concept is detected, mark it as triggered for cooldown (unless it was forced)
-      // The actual "triggering" (showing UI) should happen on the client,
-      // but for simplicity, we can manage the timestamp here after detection.
     }
 
     return { detectedConcept };
@@ -201,16 +196,18 @@ const assistantService = {
   },
 
   async getExplanation(concept) {
-    // No changes needed here, but ensure concept is valid
-    if (!concept || !concept.name || !concept.category) {
+    // Handle both concept bank concepts and custom topics
+    if (!concept || !concept.name) {
         return { response: "Invalid concept provided for explanation." };
     }
+    
+    const category = concept.category || 'general';
     const explanationResponse = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
       messages: [
         {
           role: "system",
-          content: `You are a helpful teaching assistant. Provide a concise, engaging explanation of "${concept.name}" in the context of ${concept.category}.`
+          content: `You are a helpful teaching assistant. Provide a concise, engaging explanation of "${concept.name}"${category !== 'general' ? ` in the context of ${category}` : ''}.`
         }
       ]
     });
@@ -218,15 +215,18 @@ const assistantService = {
   },
 
   async getPracticeQuestion(concept) {
-    if (!concept || !concept.name || !concept.category) {
+    // Handle both concept bank concepts and custom topics
+    if (!concept || !concept.name) {
         return { response: "Invalid concept provided for practice question." };
     }
+    
+    const category = concept.category || 'general';
     const questionResponse = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
       messages: [
         {
           role: "system",
-          content: `Create a practice question about "${concept.name}" in the context of ${concept.category}. Include the answer clearly separated (e.g., "Answer: ...").`
+          content: `Create a practice question about "${concept.name}"${category !== 'general' ? ` in the context of ${category}` : ''}. Include the answer clearly separated (e.g., "Answer: ...").`
         }
       ]
     });
