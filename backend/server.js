@@ -330,8 +330,8 @@ async function main() {
     });
 
     // Start the server after everything is initialized
-    server.listen(port, () => {
-      console.log(`Server running on port ${port}`);
+    server.listen(port, host, () => {
+      console.log(`Server running on ${host}:${port}`);
     });
 
   } catch (error) {
